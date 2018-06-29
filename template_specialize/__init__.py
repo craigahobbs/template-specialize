@@ -87,7 +87,7 @@ def main():
             Template(f_from.read(), undefined=StrictUndefined).stream(**config_values).dump(to_file)
 
 
-class Environment(object):
+class Environment:
     __slots__ = ('name', 'parents', 'values')
 
     def __init__(self, name, parents, values=None):
