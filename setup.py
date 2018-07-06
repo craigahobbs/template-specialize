@@ -9,7 +9,7 @@ TESTS_REQUIRE = []
 
 setup(
     name='template-specialize',
-    version='0.1',
+    version='0.2',
     author='Craig Hobbs',
     author_email='craigahobbs@gmail.com',
     description=('Recursive template file specializer.'),
