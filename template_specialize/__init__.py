@@ -32,7 +32,6 @@ def main():
     parser.add_argument('--value', action='append', dest='values', metavar='VALUE', default=[],
                         help='add a template value. Must be paired with a template key.')
     args = parser.parse_args()
-
     if len(args.keys) != len(args.values):
         parser.error('mismatched keys/values')
 
@@ -46,14 +45,7 @@ def main():
     if args.environment not in environments:
         parser.exit(status=STATUS_ENVIRONMENT_NOT_FOUND, message='environment "{0}" not found\n'.format(args.environment))
     extra_values = [
-        (Environment.parse_key(key), Environment.parse_value(value)) for key, value in chain.from_iterable([
-            [
-                ('environment.fqdn', 'localhost'),
-                ('environment.hostname', 'localhost'),
-                ('environment.name', args.environment),
-            ],
-            zip(args.keys, args.values)
-        ])
+        (Environment.parse_key(key), Environment.parse_value(value)) for key, value in zip(args.keys, args.values)
     ]
     config_values = Environment.asdict(environments, args.environment, extra_values=extra_values)
 
