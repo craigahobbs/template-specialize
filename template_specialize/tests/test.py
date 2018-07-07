@@ -1,14 +1,79 @@
-# Copyright (C) 2017 Craig Hobbs
+# Copyright (C) 2017-2018 Craig Hobbs
 #
 # Licensed under the MIT License
 # https://github.com/craigahobbs/template-specialize/blob/master/LICENSE
 
-import unittest
+from io import StringIO
+import os
+import unittest.mock as unittest_mock
 
-from template_specialize import Environment
+from template_specialize import Environment, main
+
+from . import TestCase
 
 
-class Tests(unittest.TestCase):
+class TestMain(TestCase):
+
+    def test_file_to_file(self):
+        with self.create_test_files([]) as output_dir, \
+             self.create_test_files([
+                 ('template.txt', 'the value of "foo" is "{{foo}}"')
+             ]) as input_dir:
+            input_path = os.path.join(input_dir, 'template.txt')
+            output_path = os.path.join(output_dir, 'other.txt')
+            with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
+                 unittest_mock.patch('sys.stderr', new=StringIO()) as stderr, \
+                 unittest_mock.patch('sys.argv', [
+                     'template-specialize', input_path, output_path, '--key', 'foo', '--value', 'bar'
+                 ]):
+                main()
+
+            self.assertEqual(stdout.getvalue(), '')
+            self.assertEqual(stderr.getvalue(), '')
+            with open(os.path.join(output_dir, 'other.txt'), 'r', encoding='utf-8') as f_output:
+                self.assertEqual(f_output.read(), 'the value of "foo" is "bar"')
+
+    def test_file_to_dir(self):
+        with self.create_test_files([]) as output_dir, \
+             self.create_test_files([
+                 ('template.txt', 'the value of "foo" is "{{foo}}"')
+             ]) as input_dir:
+            input_path = os.path.join(input_dir, 'template.txt')
+            output_path = os.path.join(output_dir, '')
+            with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
+                 unittest_mock.patch('sys.stderr', new=StringIO()) as stderr, \
+                 unittest_mock.patch('sys.argv', [
+                     'template-specialize', input_path, output_path, '--key', 'foo', '--value', 'bar'
+                 ]):
+                main()
+
+            self.assertEqual(stdout.getvalue(), '')
+            self.assertEqual(stderr.getvalue(), '')
+            with open(os.path.join(output_dir, 'template.txt'), 'r', encoding='utf-8') as f_output:
+                self.assertEqual(f_output.read(), 'the value of "foo" is "bar"')
+
+    def test_dir_to_dir(self):
+        with self.create_test_files([]) as output_dir, \
+             self.create_test_files([
+                 ('template.txt', 'the value of "foo" is "{{foo}}"'),
+                 (('subdir', 'subtemplate.txt'), 'agree, "{{foo}}" is the value of "foo"'),
+             ]) as input_dir:
+            with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
+                 unittest_mock.patch('sys.stderr', new=StringIO()) as stderr, \
+                 unittest_mock.patch('sys.argv', [
+                     'template-specialize', input_dir, output_dir, '--key', 'foo', '--value', 'bar'
+                 ]):
+                main()
+
+            self.assertEqual(stdout.getvalue(), '')
+            self.assertEqual(stderr.getvalue(), '')
+            with open(os.path.join(output_dir, 'template.txt'), 'r', encoding='utf-8') as f_output:
+                self.assertEqual(f_output.read(), 'the value of "foo" is "bar"')
+            with open(os.path.join(output_dir, 'subdir', 'subtemplate.txt'), 'r', encoding='utf-8') as f_output:
+                self.assertEqual(f_output.read(), 'agree, "bar" is the value of "foo"')
+
+
+class TestEnvironment(TestCase):
 
     def test_parse(self):
         environments = Environment.parse('''\

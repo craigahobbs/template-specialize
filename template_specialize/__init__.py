@@ -1,4 +1,4 @@
-# Copyright (C) 2017 Craig Hobbs
+# Copyright (C) 2017-2018 Craig Hobbs
 #
 # Licensed under the MIT License
 # https://github.com/craigahobbs/template-specialize/blob/master/LICENSE
@@ -12,21 +12,21 @@ import sys
 from jinja2 import Template, StrictUndefined
 
 
-STATUS_ENVIRONMENT_NOT_FOUND = 10
+STATUS_UNKNOWN_ENVIRONMENT = 10
 
 
 def main():
 
     # Command line parsing
     parser = argparse.ArgumentParser()
-    parser.add_argument('from_path', metavar='FROM',
-                        help='The template "from" file or directory')
-    parser.add_argument('to_dir', metavar='TO',
-                        help='The template "to" directory')
-    parser.add_argument('-c', dest='config_value_files', metavar='FILE', action='append',
-                        help='one or more config value files')
+    parser.add_argument('src_path', metavar='SRC',
+                        help='the source template file or directory')
+    parser.add_argument('dst_path', metavar='DST',
+                        help='the destination file or directory')
+    parser.add_argument('-c', dest='environment_files', metavar='FILE', action='append',
+                        help='the environment files')
     parser.add_argument('-e', dest='environment', metavar='ENV',
-                        help='environment name - return status {0} if environment is not found'.format(STATUS_ENVIRONMENT_NOT_FOUND))
+                        help='the environment name - return status {0} if unknown environment'.format(STATUS_UNKNOWN_ENVIRONMENT))
     parser.add_argument('--key', action='append', dest='keys', metavar='KEY', default=[],
                         help='add a template key. Must be paired with a template value.')
     parser.add_argument('--value', action='append', dest='values', metavar='VALUE', default=[],
@@ -35,48 +35,38 @@ def main():
     if len(args.keys) != len(args.values):
         parser.error('mismatched keys/values')
 
-    # Parse the config files
+    # Parse the environment files
     environments = {}
-    for config_value_file in args.config_value_files:
-        with open(config_value_file, 'r') as config:
-            Environment.parse(config, filename=config_value_file, environments=environments)
+    if args.environment_files:
+        for environment_file in args.environment_files:
+            with open(environment_file, 'r', encoding='utf-8') as f_environment:
+                Environment.parse(f_environment, filename=environment_file, environments=environments)
 
-    # Build the environment config values dict
-    if args.environment not in environments:
-        parser.exit(status=STATUS_ENVIRONMENT_NOT_FOUND, message='environment "{0}" not found\n'.format(args.environment))
-    extra_values = [
-        (Environment.parse_key(key), Environment.parse_value(value)) for key, value in zip(args.keys, args.values)
-    ]
-    config_values = Environment.asdict(environments, args.environment, extra_values=extra_values)
-
-    # Create the relative template file paths
-    if os.path.isfile(args.from_path):
-        from_dir_root = os.path.dirname(args.from_path) or '.'
-        from_files = [os.path.basename(args.from_path)]
+    # Build the template variables dict
+    if args.environment:
+        if args.environment not in environments:
+            parser.exit(status=STATUS_UNKNOWN_ENVIRONMENT, message='unknown environment "{0}"\n'.format(args.environment))
+            extra_variables = [(Environment.parse_key(key), Environment.parse_value(value)) for key, value in zip(args.keys, args.values)]
+        template_variables = Environment.asdict(environments, args.environment, extra_values=extra_variables)
     else:
-        from_dir_root = args.from_path
-        assert os.path.isdir(from_dir_root), '"{0}" is not a directory'.format(from_dir_root)
-        from_files = list(chain.from_iterable(
-            (os.path.relpath(os.path.join(root, file_), from_dir_root) for file_ in files)
-            for root, dirs, files in os.walk(args.from_path)
-        ))
+        template_variables = dict(zip(args.keys, args.values))
+
+    # Create the source and destination template file paths
+    if os.path.isfile(args.src_path):
+        src_files = [args.src_path]
+        if args.dst_path.endswith(os.sep):
+            dst_files = [os.path.join(args.dst_path, os.path.basename(args.src_path))]
+        else:
+            dst_files = [args.dst_path]
+    else:
+        src_files = list(chain.from_iterable((os.path.join(root, file_) for file_ in files) for root, _, files in os.walk(args.src_path)))
+        dst_files = [os.path.join(args.dst_path, os.path.relpath(file_, args.src_path)) for file_ in src_files]
 
     # Process the template files
-    to_dir_root = args.to_dir
-    for file_rel in from_files:
-        from_file = os.path.join(from_dir_root, file_rel)
-        to_file = os.path.join(to_dir_root, file_rel)
-
-        # Ensure the "to" directory exists
-        to_dir = os.path.dirname(to_file)
-        if os.path.exists(to_dir):
-            assert os.path.isdir(to_dir), '"{0}" is not a directory'.format(to_dir)
-        else:
-            os.makedirs(to_dir)
-
-        # Process the template
-        with open(from_file, 'r') as f_from:
-            Template(f_from.read(), undefined=StrictUndefined).stream(**config_values).dump(to_file)
+    for src_file, dst_file in zip(src_files, dst_files):
+        os.makedirs(os.path.dirname(dst_file), exist_ok=True)
+        with open(src_file, 'r', encoding='utf-8') as f_from:
+            Template(f_from.read(), undefined=StrictUndefined).stream(**template_variables).dump(dst_file, encoding='utf-8')
 
 
 class Environment:
@@ -89,8 +79,7 @@ class Environment:
 
     _RE_COMMENT = re.compile(r'^\s*(?:#.*)?$')
     _RE_ENV = re.compile(r'^(?P<env>\w+)(?:\s*\(\s*(?P<parents>\w+(?:\s*,\s*\w*)*)\s*\))?\s*:\s*$')
-    _RE_PART_KEY = r'[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)*'
-    _RE_VALUE = re.compile(r'^\s+(?P<key>' + _RE_PART_KEY + r')\s*=\s*(?P<value>"[^"]*"|[0-9]+(?:\.[0-9]*)?|true|false)\s*$')
+    _RE_VALUE = re.compile(r'^\s+(?P<key>[A-Za-z_-]+(?:\.\w+)*)\s*=\s*(?P<value>"[^"]*"|[0-9]+(?:\.[0-9]*)?|true|false)\s*$')
 
     @staticmethod
     def _parse_key_part(key_part):
