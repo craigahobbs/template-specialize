@@ -1,11 +1,9 @@
-# Copyright (C) 2017 Craig Hobbs
+# Copyright (C) 2017-2018 Craig Hobbs
 #
 # Licensed under the MIT License
 # https://github.com/craigahobbs/template-specialize/blob/master/LICENSE
 
 from setuptools import setup
-
-TESTS_REQUIRE = []
 
 setup(
     name='template-specialize',
@@ -20,6 +18,7 @@ setup(
         "Environment :: Console",
         'License :: OSI Approved :: MIT License',
         'Operating System :: OS Independent',
+        'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
@@ -29,12 +28,8 @@ setup(
     install_requires=[
         'jinja2 >= 2.9',
     ],
-    test_suite='template_specialize.tests',
-    tests_require=TESTS_REQUIRE,
-    extras_require={
-        'tests': TESTS_REQUIRE,
-    },
     entry_points={
         'console_scripts': ['template-specialize = template_specialize:main'],
     },
+    test_suite='template_specialize.tests'
 )
