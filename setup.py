@@ -5,9 +5,11 @@
 
 from setuptools import setup
 
+import template_specialize
+
 setup(
     name='template-specialize',
-    version='0.2',
+    version=template_specialize.__version__,
     author='Craig Hobbs',
     author_email='craigahobbs@gmail.com',
     description=('Recursive template file specializer.'),
