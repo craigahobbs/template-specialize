@@ -15,17 +15,17 @@ from . import TestCase
 class TestMain(TestCase):
 
     def test_file_to_file(self):
-        with self.create_test_files([]) as output_dir, \
-             self.create_test_files([
-                 ('template.txt', 'the value of "foo" is "{{foo}}"')
-             ]) as input_dir:
+        test_files = [
+            ('template.txt', 'the value of "foo" is "{{foo}}"')
+        ]
+        with self.create_test_files(test_files) as input_dir, \
+             self.create_test_files([]) as output_dir:
             input_path = os.path.join(input_dir, 'template.txt')
             output_path = os.path.join(output_dir, 'other.txt')
+            sys_argv = ['template-specialize', input_path, output_path, '--key', 'foo', '--value', 'bar']
             with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
                  unittest_mock.patch('sys.stderr', new=StringIO()) as stderr, \
-                 unittest_mock.patch('sys.argv', [
-                     'template-specialize', input_path, output_path, '--key', 'foo', '--value', 'bar'
-                 ]):
+                 unittest_mock.patch('sys.argv', sys_argv):
                 main()
 
             self.assertEqual(stdout.getvalue(), '')
@@ -34,17 +34,17 @@ class TestMain(TestCase):
                 self.assertEqual(f_output.read(), 'the value of "foo" is "bar"')
 
     def test_file_to_dir(self):
-        with self.create_test_files([]) as output_dir, \
-             self.create_test_files([
-                 ('template.txt', 'the value of "foo" is "{{foo}}"')
-             ]) as input_dir:
+        test_files = [
+            ('template.txt', 'the value of "foo" is "{{foo}}"')
+        ]
+        with self.create_test_files(test_files) as input_dir, \
+             self.create_test_files([]) as output_dir:
             input_path = os.path.join(input_dir, 'template.txt')
             output_path = os.path.join(output_dir, '')
+            sys_argv = ['template-specialize', input_path, output_path, '--key', 'foo', '--value', 'bar']
             with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
                  unittest_mock.patch('sys.stderr', new=StringIO()) as stderr, \
-                 unittest_mock.patch('sys.argv', [
-                     'template-specialize', input_path, output_path, '--key', 'foo', '--value', 'bar'
-                 ]):
+                 unittest_mock.patch('sys.argv', sys_argv):
                 main()
 
             self.assertEqual(stdout.getvalue(), '')
@@ -53,16 +53,16 @@ class TestMain(TestCase):
                 self.assertEqual(f_output.read(), 'the value of "foo" is "bar"')
 
     def test_dir_to_dir(self):
-        with self.create_test_files([]) as output_dir, \
-             self.create_test_files([
-                 ('template.txt', 'the value of "foo" is "{{foo}}"'),
-                 (('subdir', 'subtemplate.txt'), 'agree, "{{foo}}" is the value of "foo"'),
-             ]) as input_dir:
+        test_files = [
+            ('template.txt', 'the value of "foo" is "{{foo}}"'),
+            (('subdir', 'subtemplate.txt'), 'agree, "{{foo}}" is the value of "foo"')
+        ]
+        with self.create_test_files(test_files) as input_dir, \
+             self.create_test_files([]) as output_dir:
+            sys_argv = ['template-specialize', input_dir, output_dir, '--key', 'foo', '--value', 'bar']
             with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
                  unittest_mock.patch('sys.stderr', new=StringIO()) as stderr, \
-                 unittest_mock.patch('sys.argv', [
-                     'template-specialize', input_dir, output_dir, '--key', 'foo', '--value', 'bar'
-                 ]):
+                 unittest_mock.patch('sys.argv', sys_argv):
                 main()
 
             self.assertEqual(stdout.getvalue(), '')
