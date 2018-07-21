@@ -16,9 +16,6 @@ from . import __version__ as VERSION
 from .environment import Environment
 
 
-STATUS_UNKNOWN_ENVIRONMENT = 10
-
-
 def main():
 
     # Command line parsing
@@ -30,7 +27,7 @@ def main():
     parser.add_argument('-c', dest='environment_files', metavar='FILE', action='append',
                         help='the environment files')
     parser.add_argument('-e', dest='environment', metavar='ENV',
-                        help='the environment name - return status {0} if unknown environment'.format(STATUS_UNKNOWN_ENVIRONMENT))
+                        help='the environment name')
     parser.add_argument('--key', action='append', dest='keys', metavar='KEY', default=[],
                         help='add a template key. Must be paired with a template value.')
     parser.add_argument('--value', action='append', dest='values', metavar='VALUE', default=[],
@@ -55,7 +52,7 @@ def main():
     # Build the template variables dict
     if args.environment:
         if args.environment not in environments:
-            parser.exit(status=STATUS_UNKNOWN_ENVIRONMENT, message='unknown environment "{0}"\n'.format(args.environment))
+            parser.error('unknown environment "{0}"\n'.format(args.environment))
             extra_variables = [(Environment.parse_key(key), Environment.parse_value(value)) for key, value in zip(args.keys, args.values)]
         template_variables = Environment.asdict(environments, args.environment, extra_values=extra_variables)
     else:
