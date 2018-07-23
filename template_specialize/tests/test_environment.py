@@ -84,16 +84,14 @@ env:
         ])
 
     def test_parse_error(self):
-        try:
+        with self.assertRaises(SyntaxError) as exc_cm:
             Environment.parse('''\
 env1:
     a.a = "foo"
     a.b = foo
     a.c = 12.5
 ''')
-            self.fail()
-        except SyntaxError as exc:
-            self.assertEqual(str(exc), ':3: Syntax error : "    a.b = foo"')
+        self.assertEqual(str(exc_cm.exception), ':3: Syntax error : "    a.b = foo"')
 
     def test_asdict(self):
         environments = Environment.parse('''\
@@ -104,11 +102,13 @@ common:
 base(common):
     a.a = "base a.a"
     a.b = "base a.b"
+    a.c = "base a.c"
     b.0 = "base b.0"
     b.1 = "base b.1"
 
 base2:
     a.b = "base2 a.b"
+    a.c = "base2 a.c"
     a.base2 = "base2 a.base2"
 
 env(base, base2):
@@ -121,6 +121,7 @@ env(base, base2):
             'a': {
                 'a': 'base a.a',
                 'b': 'env a.b',
+                'c': 'base2 a.c',
                 'base2': 'base2 a.base2',
                 'd': 'common a.d',
                 'env': 'env a.env'

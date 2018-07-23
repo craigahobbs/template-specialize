@@ -41,11 +41,7 @@ class Environment:
             return int(value_str)
         except ValueError:
             pass
-        try:
-            return float(value_str)
-        except ValueError:
-            pass
-        return value_str
+        return float(value_str)
 
     @classmethod
     def parse(cls, lines, filename='', environments=None):
@@ -98,7 +94,7 @@ class Environment:
         for key, value, _ in sorted(environments[environment_name].values):
             cls._add_value(container, key, value, new_lists)
         if environments[environment_name].parents is not None:
-            for parent_name in environments[environment_name].parents:
+            for parent_name in reversed(environments[environment_name].parents):
                 cls.asdict(environments, parent_name, container=container)
         return container
 
