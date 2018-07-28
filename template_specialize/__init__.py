@@ -7,6 +7,3 @@ __version__ = '0.3'
 
 from .environment import \
     Environment
-
-from .main import \
-    main

@@ -31,7 +31,7 @@ setup(
         'jinja2 >= 2.9',
     ],
     entry_points={
-        'console_scripts': ['template-specialize = template_specialize:main'],
+        'console_scripts': ['template-specialize = template_specialize.main:main'],
     },
     test_suite='template_specialize.tests'
 )

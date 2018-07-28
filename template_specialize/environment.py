@@ -41,7 +41,11 @@ class Environment:
             return int(value_str)
         except ValueError:
             pass
-        return float(value_str)
+        try:
+            return float(value_str)
+        except ValueError:
+            pass
+        return value_str
 
     @classmethod
     def parse(cls, lines, filename='', environments=None):

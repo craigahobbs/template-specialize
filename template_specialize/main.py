@@ -4,19 +4,20 @@
 # https://github.com/craigahobbs/template-specialize/blob/master/LICENSE
 
 import argparse
+from io import StringIO
 from itertools import chain
 import os
 
 try:
     from jinja2 import Template, StrictUndefined
-except ImportError:
+except ImportError: # pragma: no cover
     pass
 
 from . import __version__ as VERSION
 from .environment import Environment
 
 
-def main():
+def main(argv=None):
 
     # Command line parsing
     parser = argparse.ArgumentParser()
@@ -34,9 +35,9 @@ def main():
                         help='add a template value. Must be paired with a template key.')
     parser.add_argument('-v', '--version', action='store_true',
                         help='show version number and quit')
-    args = parser.parse_args()
+    args = parser.parse_args(args=argv)
     if args.version:
-        parser.exit(VERSION)
+        parser.exit(message=VERSION + '\n')
     if not args.src_path or not args.dst_path:
         parser.error('missing source file/directory and/or destination file/directory')
     if len(args.keys) != len(args.values):
@@ -48,15 +49,16 @@ def main():
         for environment_file in args.environment_files:
             with open(environment_file, 'r', encoding='utf-8') as f_environment:
                 Environment.parse(f_environment, filename=environment_file, environments=environments)
+    else:
+        if not args.environment:
+            args.environment = '__none__'
+        Environment.parse(StringIO('__none__:'), environments=environments)
 
     # Build the template variables dict
-    if args.environment:
-        if args.environment not in environments:
-            parser.error('unknown environment "{0}"\n'.format(args.environment))
-            extra_variables = [(Environment.parse_key(key), Environment.parse_value(value)) for key, value in zip(args.keys, args.values)]
-        template_variables = Environment.asdict(environments, args.environment, extra_values=extra_variables)
-    else:
-        template_variables = dict(zip(args.keys, args.values))
+    if args.environment not in environments:
+        parser.error('unknown environment "{0}"'.format(args.environment))
+    extra_variables = [(Environment.parse_key(key), Environment.parse_value(value)) for key, value in zip(args.keys, args.values)]
+    template_variables = Environment.asdict(environments, args.environment, extra_values=extra_variables)
 
     # Create the source and destination template file paths
     if os.path.isfile(args.src_path):
