@@ -4,7 +4,6 @@
 # https://github.com/craigahobbs/template-specialize/blob/master/LICENSE
 
 import argparse
-from io import StringIO
 from itertools import chain
 import os
 
@@ -14,7 +13,7 @@ except ImportError: # pragma: no cover
     pass
 
 from . import __version__ as VERSION
-from .environment import Environment
+from .environment import Environments
 
 
 def main(argv=None):
@@ -44,21 +43,22 @@ def main(argv=None):
         parser.error('mismatched keys/values')
 
     # Parse the environment files
-    environments = {}
+    environments = Environments()
     if args.environment_files:
         for environment_file in args.environment_files:
             with open(environment_file, 'r', encoding='utf-8') as f_environment:
-                Environment.parse(f_environment, filename=environment_file, environments=environments)
-    else:
-        if not args.environment:
-            args.environment = '__none__'
-        Environment.parse(StringIO('__none__:'), environments=environments)
+                environments.parse(f_environment, filename=environment_file)
 
     # Build the template variables dict
-    if args.environment not in environments:
-        parser.error('unknown environment "{0}"'.format(args.environment))
-    extra_variables = [(Environment.parse_key(key), Environment.parse_value(value)) for key, value in zip(args.keys, args.values)]
-    template_variables = Environment.asdict(environments, args.environment, extra_values=extra_variables)
+    if args.environment is None:
+        environment = environments.add_environment('', [])
+    else:
+        if args.environment not in environments:
+            parser.error('unknown environment "{0}"'.format(args.environment))
+        environment = environments.add_environment('', [args.environment])
+    for key, value in zip(args.keys, args.values):
+        environment.add_value(key, value)
+    template_variables = environments.asdict('')
 
     # Create the source and destination template file paths
     if os.path.isfile(args.src_path):

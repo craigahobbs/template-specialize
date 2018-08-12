@@ -9,14 +9,10 @@ import re
 class Environment:
     __slots__ = ('name', 'parents', 'values')
 
-    def __init__(self, name, parents, values=None):
+    def __init__(self, name, parents):
         self.name = name
         self.parents = parents
-        self.values = [] if values is None else values
-
-    _RE_COMMENT = re.compile(r'^\s*(?:#.*)?$')
-    _RE_ENV = re.compile(r'^(?P<env>\w+)(?:\s*\(\s*(?P<parents>\w+(?:\s*,\s*\w*)*)\s*\))?\s*:\s*$')
-    _RE_VALUE = re.compile(r'^\s+(?P<key>[A-Za-z_-]+(?:\.\w+)*)\s*=\s*(?P<value>"[^"]*"|[0-9]+(?:\.[0-9]*)?|true|false)\s*$')
+        self.values = {}
 
     @staticmethod
     def _parse_key_part(key_part):
@@ -26,11 +22,11 @@ class Environment:
             return key_part
 
     @classmethod
-    def parse_key(cls, key_str):
+    def _parse_key(cls, key_str):
         return tuple(cls._parse_key_part(part) for part in key_str.split('.'))
 
     @staticmethod
-    def parse_value(value_str):
+    def _parse_value(value_str):
         if value_str == 'true':
             return True
         elif value_str == 'false':
@@ -47,77 +43,91 @@ class Environment:
             pass
         return value_str
 
-    @classmethod
-    def parse(cls, lines, filename='', environments=None):
-        envs = environments if environments is not None else {}
+    def add_value(self, key_str, value_str):
+        key = self._parse_key(key_str)
+        value = self._parse_value(value_str)
+        if key in self.values:
+            return None
+        self.values[key] = value
+        return key, value
+
+
+class Environments(dict):
+    __slots__ = ()
+
+    _RE_COMMENT = re.compile(r'^\s*(?:#.*)?$')
+    _RE_ENV = re.compile(r'^(?P<env>[A-Za-z_]\w*)(?:\s*\(\s*(?P<parents>[A-Za-z_]\w*(?:\s*,\s*[A-Za-z_]\w*)*)\s*\))?\s*:\s*$')
+    _RE_VALUE = re.compile(r'^\s+(?P<key>[A-Za-z_]\w*(?:\.[A-Za-z_]\w*|\.\d+)*)\s*=\s*(?P<value>"[^"]*"|\d+(?:\.\d*)?|true|false)\s*$')
+
+    def add_environment(self, name, parents):
+        if name in self:
+            return None
+        environment = self[name] = Environment(name, parents)
+        return environment
+
+    def parse(self, lines, filename=''):
         env_cur = None
         for ix_line, line in enumerate(lines.splitlines() if isinstance(lines, str) else lines):
 
             # Match the line
-            match_comment = cls._RE_COMMENT.search(line)
+            match_comment = self._RE_COMMENT.search(line)
             if match_comment is None:
-                match_env = cls._RE_ENV.search(line)
+                match_env = self._RE_ENV.search(line)
                 if match_env is None:
-                    match_value = cls._RE_VALUE.search(line)
+                    match_value = self._RE_VALUE.search(line)
 
             # Process the line
             if match_comment:
                 pass
             elif match_env:
                 env_name = match_env.group('env')
-                env_parents = match_env.group('parents')
-                if env_parents is not None:
-                    env_parents = [parent.strip() for parent in env_parents.split(',')]
-                env_cur = envs[env_name] = envs.get(env_name)
-                if not env_cur or (not env_cur.parents and env_parents):
-                    env_cur = envs[env_name] = Environment(env_name, env_parents, values=env_cur and env_cur.values)
-                elif env_parents and not env_parents == env_cur.parents:
-                    raise SyntaxError('{0}:{1}: Inconsistent definition of environment "{2}"'.format(filename, ix_line + 1, env_name))
+                env_parents_str = match_env.group('parents')
+                env_parents = tuple(name.strip() for name in env_parents_str.split(',')) if env_parents_str is not None else ()
+                env_cur = self.add_environment(env_name, env_parents)
+                if env_cur is None:
+                    raise SyntaxError('{0}:{1}: Redefinition of environment "{2}"'.format(filename, ix_line + 1, env_name))
             elif env_cur and match_value:
                 key_str = match_value.group('key')
-                key = cls.parse_key(key_str)
-                value = cls.parse_value(match_value.group('value'))
-                key_value = (key, value, env_cur.name)
-                if any(e == env_cur.name for k, _, e in env_cur.values if k == key):
+                value_str = match_value.group('value')
+                if env_cur.add_value(key_str, value_str) is None:
                     raise SyntaxError('{0}:{1}: Redefinition of value "{2}"'.format(filename, ix_line + 1, key_str))
-                env_cur.values.append(key_value)
             else:
                 raise SyntaxError('{0}:{1}: Syntax error : "{2}"'.format(filename, ix_line + 1, line))
 
-        return envs
+    def asdict(self, environment_name, environment_dict=None):
+        if environment_dict is None:
+            environment_dict = {}
 
-    @classmethod
-    def asdict(cls, environments, environment_name, extra_values=None, container=None):
-        if container is None:
-            container = {}
-        if extra_values is not None:
-            new_lists = []
-            for key, value in extra_values:
-                cls._add_value(container, key, value, new_lists)
-        new_lists = []
-        for key, value, _ in sorted(environments[environment_name].values):
-            cls._add_value(container, key, value, new_lists)
-        if environments[environment_name].parents is not None:
-            for parent_name in reversed(environments[environment_name].parents):
-                cls.asdict(environments, parent_name, container=container)
-        return container
+        for parent_name in self[environment_name].parents:
+            self.asdict(parent_name, environment_dict)
 
-    @staticmethod
-    def _add_value(container, key, value, new_lists):
-        for idx in range(len(key) - 1):
-            subkey = key[idx]
-            if subkey in container:
-                container_next = container[subkey]
-            elif isinstance(key[idx + 1], int):
-                container_next = []
-                new_lists.append(container_next)
+        for key, value in sorted(self[environment_name].values.items()):
+            container = environment_dict
+            for idx in range(len(key) - 1):
+                if isinstance(container, list):
+                    if key[idx] < len(container):
+                        container_next = container[key[idx]]
+                    else:
+                        if isinstance(key[idx + 1], int):
+                            container_next = []
+                        else:
+                            container_next = {}
+                        container.append(container_next)
+                else:
+                    container_next = container.get(key[idx])
+                    if container_next is None:
+                        if isinstance(key[idx + 1], int):
+                            container_next = []
+                        else:
+                            container_next = {}
+                        container[key[idx]] = container_next
+                container = container_next
+            if isinstance(container, list):
+                if key[-1] < len(container):
+                    container[key[-1]] = value
+                else:
+                    container.append(value)
             else:
-                container_next = {}
-            container[subkey] = container_next
-            container = container_next
-        if isinstance(container, list):
-            if container in new_lists:
-                container.append(value)
-        else:
-            if key[-1] not in container:
                 container[key[-1]] = value
+
+        return environment_dict

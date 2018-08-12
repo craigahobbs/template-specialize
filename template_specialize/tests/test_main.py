@@ -142,7 +142,7 @@ a.c = {{a.c}}
                     '''\
 a.a = foo
 a.b = bar
-a.c = [3]'''
+a.c = [1, 2, 3]'''
                 )
 
     def test_keys_only(self):
