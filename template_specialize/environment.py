@@ -128,6 +128,40 @@ class Environments(dict):
                 pass
         return errors
 
+    def asdict(self, environment_name):
+        environment_dict = {}
+        for key_value in self._iterate_values(environment_name):
+            key = key_value.key
+            container = environment_dict
+            for idx in range(len(key) - 1):
+                if isinstance(container, list):
+                    if key[idx] < len(container):
+                        container_next = container[key[idx]]
+                    else:
+                        if isinstance(key[idx + 1], int):
+                            container_next = []
+                        else:
+                            container_next = {}
+                        container.append(container_next) # pylint: disable=no-member
+                else:
+                    container_next = container.get(key[idx])
+                    if container_next is None:
+                        if isinstance(key[idx + 1], int):
+                            container_next = []
+                        else:
+                            container_next = {}
+                        container[key[idx]] = container_next
+                container = container_next
+            if isinstance(container, list):
+                if key[-1] < len(container):
+                    container[key[-1]] = key_value.value
+                else:
+                    container.append(key_value.value)
+            else:
+                container[key[-1]] = key_value.value
+
+        return environment_dict
+
     def _iterate_values(self, environment_name, errors=None):
         lists = {}
         types = {}
@@ -167,6 +201,20 @@ class Environments(dict):
                             if error not in errors:
                                 errors.append(error)
 
+            # Check for value type change
+            type_ = types.get(key)
+            if key not in types:
+                types[key] = type(None)
+            else:
+                if type_ is not type(None):
+                    skip = True
+                    if errors is not None:
+                        error = '{0}:{1}: Redefinition of container type "{2}"'.format(
+                            key_value.filename, key_value.lineno, '.'.join(str(x) for x in key)
+                        )
+                        if error not in errors:
+                            errors.append(error)
+
             if not skip:
                 yield key_value
 
@@ -201,37 +249,3 @@ class Environments(dict):
                 circulars.remove(parent_name)
 
         yield from sorted(environment.values)
-
-    def asdict(self, environment_name):
-        environment_dict = {}
-        for key_value in self._iterate_values(environment_name):
-            key = key_value.key
-            container = environment_dict
-            for idx in range(len(key) - 1):
-                if isinstance(container, list):
-                    if key[idx] < len(container):
-                        container_next = container[key[idx]]
-                    else:
-                        if isinstance(key[idx + 1], int):
-                            container_next = []
-                        else:
-                            container_next = {}
-                        container.append(container_next) # pylint: disable=no-member
-                else:
-                    container_next = container.get(key[idx])
-                    if container_next is None:
-                        if isinstance(key[idx + 1], int):
-                            container_next = []
-                        else:
-                            container_next = {}
-                        container[key[idx]] = container_next
-                container = container_next
-            if isinstance(container, list):
-                if key[-1] < len(container):
-                    container[key[-1]] = key_value.value
-                else:
-                    container.append(key_value.value)
-            else:
-                container[key[-1]] = key_value.value
-
-        return environment_dict

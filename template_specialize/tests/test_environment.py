@@ -3,12 +3,81 @@
 # Licensed under the MIT License
 # https://github.com/craigahobbs/template-specialize/blob/master/LICENSE
 
-from template_specialize.environment import Environment, Environments
+from template_specialize.environment import EnvironmentKeyValue, Environment, Environments
 
 from . import TestCase
 
 
+class TestEnvironmentKeyValue(TestCase):
+
+    def test_new(self):
+        self.assertTupleEqual(
+            EnvironmentKeyValue('a.b.0.c.1', 'true'),
+            (('a', 'b', 0, 'c', 1), True, '', 0)
+        )
+        self.assertTupleEqual(
+            EnvironmentKeyValue('a', 'false'),
+            (('a',), False, '', 0)
+        )
+        self.assertTupleEqual(
+            EnvironmentKeyValue('a', '7'),
+            (('a',), 7, '', 0)
+        )
+        self.assertTupleEqual(
+            EnvironmentKeyValue('a', '3.14'),
+            (('a',), 3.14, '', 0)
+        )
+        self.assertTupleEqual(
+            EnvironmentKeyValue('a', '"abc"'),
+            (('a',), 'abc', '', 0)
+        )
+        self.assertTupleEqual(
+            EnvironmentKeyValue('a', 'abc'),
+            (('a',), 'abc', '', 0)
+        )
+        self.assertTupleEqual(
+            EnvironmentKeyValue('a', '"abc"', 'test.config', 7),
+            (('a',), 'abc', 'test.config', 7)
+        )
+
+    def test_lt(self):
+        self.assertListEqual(
+            sorted([
+                EnvironmentKeyValue('a.0', '0'),
+                EnvironmentKeyValue('b.0', '1'),
+                EnvironmentKeyValue('a.1', '2'),
+                EnvironmentKeyValue('b.1', '3'),
+                EnvironmentKeyValue('b.1', '3.5'),
+                EnvironmentKeyValue('b.1.b', '4'),
+                EnvironmentKeyValue('b.1.2', '5'),
+                EnvironmentKeyValue('b.1.5', '6'),
+                EnvironmentKeyValue('b.a.2', '7')
+            ]),
+            [
+                (('a', 0), 0, '', 0),
+                (('a', 1), 2, '', 0),
+                (('b', 0), 1, '', 0),
+                (('b', 1), 3, '', 0),
+                (('b', 1), 3.5, '', 0),
+                (('b', 1, 2), 5, '', 0),
+                (('b', 1, 5), 6, '', 0),
+                (('b', 1, 'b'), 4, '', 0),
+                (('b', 'a', 2), 7, '', 0)
+            ]
+        )
+
+
 class TestEnvironment(TestCase):
+
+    def test_new(self):
+        self.assertEqual(
+            Environment('env', ('env2', 'env3')),
+            ('env', ('env2', 'env3'), [], '', 0)
+        )
+        self.assertEqual(
+            Environment('env', ('env2', 'env3'), 'test.config', 7),
+            ('env', ('env2', 'env3'), [], 'test.config', 7)
+        )
 
     def test_add_value(self):
         environment = Environment('env', ())
@@ -217,27 +286,47 @@ env:
 env:
     a.b.0 = "env a.b.0"
     a.b.1 = "env a.b.1"
+    b.0 = "env b.0"
+    c.a = "env c.a"
+    d.0.0 = "env d.0.0"
+    e.a.a = "env e.a.a"
 
 env2(env):
     a.b.a = "env2 a.b.a"
+    b.0.a = "env2 b.0.a"
+    c.0 = "env2 c.0"
+    d.0.a = "env2 d.0.a"
+    e.a = "env2 e.a"
 
 env3(env2):
-''', filename='test.config')
+''')
         self.assertListEqual(errors, [])
         self.assertListEqual(environments.check(), [
-            'test.config:6: Redefinition of container type "a.b"'
+            ':10: Redefinition of container type "a.b"',
+            ':11: Redefinition of container type "b.0"',
+            ':12: Redefinition of container type "c"',
+            ':13: Redefinition of container type "d.0"',
+            ':14: Redefinition of container type "e.a"'
         ])
         self.assertListEqual(sorted(environments.keys()), ['env', 'env2', 'env3'])
         self.assertEqual(environments['env'].name, 'env')
         self.assertTupleEqual(environments['env'].parents, ())
         self.assertListEqual(environments['env'].values, [
-            (('a', 'b', 0), 'env a.b.0', 'test.config', 2),
-            (('a', 'b', 1), 'env a.b.1', 'test.config', 3)
+            (('a', 'b', 0), 'env a.b.0', '', 2),
+            (('a', 'b', 1), 'env a.b.1', '', 3),
+            (('b', 0), 'env b.0', '', 4),
+            (('c', 'a'), 'env c.a', '', 5),
+            (('d', 0, 0), 'env d.0.0', '', 6),
+            (('e', 'a', 'a'), 'env e.a.a', '', 7)
         ])
         self.assertEqual(environments['env2'].name, 'env2')
         self.assertTupleEqual(environments['env2'].parents, ('env',))
         self.assertListEqual(environments['env2'].values, [
-            (('a', 'b', 'a'), 'env2 a.b.a', 'test.config', 6)
+            (('a', 'b', 'a'), 'env2 a.b.a', '', 10),
+            (('b', 0, 'a'), 'env2 b.0.a', '', 11),
+            (('c', 0), 'env2 c.0', '', 12),
+            (('d', 0, 'a'), 'env2 d.0.a', '', 13),
+            (('e', 'a'), 'env2 e.a', '', 14)
         ])
         self.assertEqual(environments['env3'].name, 'env3')
         self.assertTupleEqual(environments['env3'].parents, ('env2',))
@@ -310,27 +399,27 @@ env2(env, env5):
 
 env3(env2):
     a.b.e = 4
-''', filename='test.config')
+''')
         self.assertListEqual(errors, [])
         self.assertListEqual(environments.check(), [
-            'test.config:4: Environment "env2" has unknown parent environment "env5"'
+            ':4: Environment "env2" has unknown parent environment "env5"'
         ])
         self.assertListEqual(sorted(environments.keys()), ['env', 'env2', 'env3'])
         self.assertEqual(environments['env'].name, 'env')
         self.assertTupleEqual(environments['env'].parents, ())
         self.assertListEqual(environments['env'].values, [
-            (('a', 'b', 'c'), 1, 'test.config', 2)
+            (('a', 'b', 'c'), 1, '', 2)
         ])
         self.assertEqual(environments['env2'].name, 'env2')
         self.assertTupleEqual(environments['env2'].parents, ('env', 'env5'))
         self.assertListEqual(environments['env2'].values, [
-            (('a', 'b', 'c'), 2, 'test.config', 5),
-            (('a', 'b', 'd'), 3, 'test.config', 6)
+            (('a', 'b', 'c'), 2, '', 5),
+            (('a', 'b', 'd'), 3, '', 6)
         ])
         self.assertEqual(environments['env3'].name, 'env3')
         self.assertTupleEqual(environments['env3'].parents, ('env2',))
         self.assertListEqual(environments['env3'].values, [
-            (('a', 'b', 'e'), 4, 'test.config', 9),
+            (('a', 'b', 'e'), 4, '', 9),
         ])
 
     def test_check_circular(self):
@@ -625,16 +714,24 @@ env2(env):
         environment = environments.add_environment('env', [])
         environment.add_value('a.0', 'env a.0')
         environment.add_value('a.a', 'env a.a')
+        environment.add_value('b.a', 'env b.a')
         environment2 = environments.add_environment('env2', ['env'])
         environment2.add_value('a.a', 'env2 a.a')
+        environment2.add_value('b', 'env2 b')
         self.assertListEqual(sorted(environments.keys()), ['env', 'env2'])
         self.assertDictEqual(environments.asdict('env'), {
             'a': [
                 'env a.0'
-            ]
+            ],
+            'b': {
+                'a': 'env b.a'
+            }
         })
         self.assertDictEqual(environments.asdict('env2'), {
             'a': [
                 'env a.0'
-            ]
+            ],
+            'b': {
+                'a': 'env b.a'
+            }
         })
