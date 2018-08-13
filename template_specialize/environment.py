@@ -3,16 +3,16 @@
 # Licensed under the MIT License
 # https://github.com/craigahobbs/template-specialize/blob/master/LICENSE
 
+from collections import namedtuple
 import re
 
 
-class Environment:
-    __slots__ = ('name', 'parents', 'values')
+class EnvironmentKeyValue(namedtuple('EnvironmentKeyValue', ('key', 'value', 'filename', 'lineno'))):
 
-    def __init__(self, name, parents):
-        self.name = name
-        self.parents = parents
-        self.values = {}
+    def __new__(cls, key_str, value_str, filename='', lineno=0):
+        key = cls._parse_key(key_str)
+        value = cls._parse_value(value_str)
+        return super().__new__(cls, key, value, filename, lineno)
 
     @staticmethod
     def _parse_key_part(key_part):
@@ -43,13 +43,35 @@ class Environment:
             pass
         return value_str
 
-    def add_value(self, key_str, value_str):
-        key = self._parse_key(key_str)
-        value = self._parse_value(value_str)
-        if key in self.values:
+    def __lt__(self, other):
+        try:
+            return super().__lt__(other)
+        except TypeError:
+            part = next(part for part, other_part in zip(self.key, other.key) if not isinstance(part, type(other_part))) # pragma: no branch
+            return isinstance(part, int)
+
+
+class Environment(namedtuple('Environment', ('name', 'parents', 'values', 'filename', 'lineno'))):
+    __slots__ = ()
+
+    def __new__(cls, name, parents, filename='', lineno=0):
+        return super().__new__(cls, name, parents, [], filename, lineno)
+
+    def add_value(self, key_str, value_str, filename='', lineno=0, errors=None):
+        key_value = EnvironmentKeyValue(key_str, value_str, filename, lineno)
+        skip = False
+
+        # Check for key redefinition
+        if any(other_key_value.key == key_value.key for other_key_value in self.values):
+            skip = True
+            if errors is not None:
+                errors.append('{0}:{1}: Redefinition of value "{2}"'.format(filename, lineno, key_str))
+
+        if skip:
             return None
-        self.values[key] = value
-        return key, value
+        else:
+            self.values.append(key_value)
+            return key_value
 
 
 class Environments(dict):
@@ -59,15 +81,20 @@ class Environments(dict):
     _RE_ENV = re.compile(r'^(?P<env>[A-Za-z_]\w*)(?:\s*\(\s*(?P<parents>[A-Za-z_]\w*(?:\s*,\s*[A-Za-z_]\w*)*)\s*\))?\s*:\s*$')
     _RE_VALUE = re.compile(r'^\s+(?P<key>[A-Za-z_]\w*(?:\.[A-Za-z_]\w*|\.\d+)*)\s*=\s*(?P<value>"[^"]*"|\d+(?:\.\d*)?|true|false)\s*$')
 
-    def add_environment(self, name, parents):
-        if name in self:
-            return None
-        environment = self[name] = Environment(name, parents)
+    def add_environment(self, name, parents, filename='', lineno=0, errors=None):
+        environment = self.get(name)
+        if environment is not None:
+            if errors is not None:
+                errors.append('{0}:{1}: Redefinition of environment "{2}"'.format(filename, lineno, name))
+        else:
+            environment = self[name] = Environment(name, parents, filename=filename, lineno=lineno)
         return environment
 
-    def parse(self, lines, filename=''):
+    def parse(self, lines, filename='', errors=None):
+        if errors is None:
+            errors = []
         env_cur = None
-        for ix_line, line in enumerate(lines.splitlines() if isinstance(lines, str) else lines):
+        for ix_line, line in enumerate(line.rstrip() for line in (lines.splitlines() if isinstance(lines, str) else lines)): # pylint: disable=superfluous-parens
 
             # Match the line
             match_comment = self._RE_COMMENT.search(line)
@@ -83,25 +110,102 @@ class Environments(dict):
                 env_name = match_env.group('env')
                 env_parents_str = match_env.group('parents')
                 env_parents = tuple(name.strip() for name in env_parents_str.split(',')) if env_parents_str is not None else ()
-                env_cur = self.add_environment(env_name, env_parents)
-                if env_cur is None:
-                    raise SyntaxError('{0}:{1}: Redefinition of environment "{2}"'.format(filename, ix_line + 1, env_name))
+                env_cur = self.add_environment(env_name, env_parents, filename=filename, lineno=ix_line + 1, errors=errors)
             elif env_cur and match_value:
                 key_str = match_value.group('key')
                 value_str = match_value.group('value')
-                if env_cur.add_value(key_str, value_str) is None:
-                    raise SyntaxError('{0}:{1}: Redefinition of value "{2}"'.format(filename, ix_line + 1, key_str))
+                env_cur.add_value(key_str, value_str, filename=filename, lineno=ix_line + 1, errors=errors)
             else:
-                raise SyntaxError('{0}:{1}: Syntax error : "{2}"'.format(filename, ix_line + 1, line))
+                errors.append('{0}:{1}: Syntax error: "{2}"'.format(filename, ix_line + 1, line))
 
-    def asdict(self, environment_name, environment_dict=None):
-        if environment_dict is None:
-            environment_dict = {}
+        return errors
 
-        for parent_name in self[environment_name].parents:
-            self.asdict(parent_name, environment_dict)
+    def check(self, errors=None):
+        if errors is None:
+            errors = []
+        for env_name in sorted(self.keys()):
+            for _ in self._iterate_values(env_name, errors=errors):
+                pass
+        return errors
 
-        for key, value in sorted(self[environment_name].values.items()):
+    def _iterate_values(self, environment_name, errors=None):
+        lists = {}
+        types = {}
+        for key_value in self._iterate_values_inner(environment_name, set(), errors=errors):
+            key = key_value.key
+            skip = False
+
+            for idx in range(len(key) - 1):
+                subkey = key[:idx + 1]
+
+                # Check array indexes
+                list_index = key[idx + 1]
+                if isinstance(list_index, int):
+                    list_length = lists.get(subkey, 0)
+                    if list_index > list_length:
+                        skip = True
+                        if errors is not None:
+                            error = '{0}:{1}: Invalid list index "{2}"'.format(
+                                key_value.filename, key_value.lineno, '.'.join(str(x) for x in key[:idx + 2])
+                            )
+                            if error not in errors:
+                                errors.append(error)
+                    else:
+                        lists[subkey] = max(list_length, list_index + 1)
+
+                # Check for container type change
+                type_ = types.get(subkey)
+                if type_ is None:
+                    types[subkey] = type(key[idx + 1])
+                else:
+                    if not isinstance(key[idx + 1], type_):
+                        skip = True
+                        if errors is not None:
+                            error = '{0}:{1}: Redefinition of container type "{2}"'.format(
+                                key_value.filename, key_value.lineno, '.'.join(str(x) for x in subkey)
+                            )
+                            if error not in errors:
+                                errors.append(error)
+
+            if not skip:
+                yield key_value
+
+    def _iterate_values_inner(self, environment_name, circulars, errors=None):
+        environment = self[environment_name]
+        for parent_name in environment.parents:
+            skip = False
+
+            # Check for unknown environment inheritance
+            if parent_name not in self:
+                if errors is not None:
+                    error = '{0}:{1}: Environment "{2}" has unknown parent environment "{3}"'.format(
+                        environment.filename, environment.lineno, environment.name, parent_name
+                    )
+                    if error not in errors:
+                        errors.append(error)
+                skip = True
+
+            # Check for circular environment inheritance
+            if parent_name in circulars:
+                if errors is not None:
+                    error = '{0}:{1}: Environment "{2}" has circular parent environment "{3}"'.format(
+                        environment.filename, environment.lineno, environment.name, parent_name
+                    )
+                    if error not in errors:
+                        errors.append(error)
+                skip = True
+
+            if not skip:
+                circulars.add(parent_name)
+                yield from self._iterate_values_inner(parent_name, circulars, errors=errors)
+                circulars.remove(parent_name)
+
+        yield from sorted(environment.values)
+
+    def asdict(self, environment_name):
+        environment_dict = {}
+        for key_value in self._iterate_values(environment_name):
+            key = key_value.key
             container = environment_dict
             for idx in range(len(key) - 1):
                 if isinstance(container, list):
@@ -112,7 +216,7 @@ class Environments(dict):
                             container_next = []
                         else:
                             container_next = {}
-                        container.append(container_next)
+                        container.append(container_next) # pylint: disable=no-member
                 else:
                     container_next = container.get(key[idx])
                     if container_next is None:
@@ -124,10 +228,10 @@ class Environments(dict):
                 container = container_next
             if isinstance(container, list):
                 if key[-1] < len(container):
-                    container[key[-1]] = value
+                    container[key[-1]] = key_value.value
                 else:
-                    container.append(value)
+                    container.append(key_value.value)
             else:
-                container[key[-1]] = value
+                container[key[-1]] = key_value.value
 
         return environment_dict

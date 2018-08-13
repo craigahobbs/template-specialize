@@ -5,6 +5,7 @@
 
 from io import StringIO
 import os
+import re
 import unittest.mock as unittest_mock
 
 from template_specialize import __version__
@@ -74,6 +75,64 @@ usage: setup.py [-h] [-c FILE] [-e ENV] [--key KEY] [--value VALUE] [-v]
 setup.py: error: mismatched keys/values
 '''
             )
+    def test_config_errors(self):
+        test_files = [
+            (
+                'config1.config',
+                '''\
+env1:
+    a.a = "env1 a.a"
+    b.a = "env1 b.a"
+    asdf1
+
+env2:
+    a.0 = "env2 a.0"
+    asdf2
+'''
+            ),
+            (
+                'config2.config',
+                '''\
+env3(env1, env2):
+'''
+            ),
+            (
+                'template.txt', '''\
+a.a = {{a.a}}
+b.a = {{b.a}}
+'''
+            )
+        ]
+        with self.create_test_files(test_files) as input_dir, \
+             self.create_test_files([]) as output_dir:
+            config1_path = os.path.join(input_dir, 'config1.config')
+            config2_path = os.path.join(input_dir, 'config2.config')
+            input_path = os.path.join(input_dir, 'template.txt')
+            output_path = os.path.join(output_dir, 'other.txt')
+            with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
+                 unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
+                with self.assertRaises(SystemExit) as cm_exc:
+                    main([
+                        '-c', config1_path,
+                        '-c', config2_path,
+                        '-e', 'env3',
+                        '--key', 'b.0', '--value', '- b.0',
+                        input_path,
+                        output_path
+                    ])
+
+            self.assertEqual(cm_exc.exception.code, 2)
+            self.assertEqual(stdout.getvalue(), '')
+            self.assertEqual(
+                re.sub('^.+?config', 'config', stderr.getvalue(), flags=re.MULTILINE),
+                '''\
+config1.config:4: Syntax error: "    asdf1"
+config1.config:8: Syntax error: "    asdf2"
+config1.config:7: Redefinition of container type "a"
+:1: Redefinition of container type "b"
+'''
+            )
+            self.assertFalse(os.path.exists(os.path.join(output_dir, 'other.txt')))
 
     def test_sys_argv(self):
         test_files = [

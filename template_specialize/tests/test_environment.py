@@ -15,27 +15,27 @@ class TestEnvironment(TestCase):
 
         self.assertEqual(
             environment.add_value('a.0.b', 'true'),
-            (('a', 0, 'b'), True)
+            (('a', 0, 'b'), True, '', 0)
         )
         self.assertEqual(
             environment.add_value('a.1.b', 'false'),
-            (('a', 1, 'b'), False)
+            (('a', 1, 'b'), False, '', 0)
         )
         self.assertEqual(
             environment.add_value('a.2.b', '"string"'),
-            (('a', 2, 'b'), 'string')
+            (('a', 2, 'b'), 'string', '', 0)
         )
         self.assertEqual(
             environment.add_value('a.3.b', '7'),
-            (('a', 3, 'b'), 7)
+            (('a', 3, 'b'), 7, '', 0)
         )
         self.assertEqual(
             environment.add_value('a.4.b', '3.14'),
-            (('a', 4, 'b'), 3.14)
+            (('a', 4, 'b'), 3.14, '', 0)
         )
         self.assertEqual(
             environment.add_value('a.5.b', 'asdf'),
-            (('a', 5, 'b'), 'asdf')
+            (('a', 5, 'b'), 'asdf', '', 0)
         )
         self.assertIsNone(
             environment.add_value('a.5.b', '11')
@@ -43,14 +43,14 @@ class TestEnvironment(TestCase):
 
         self.assertEqual(environment.name, 'env')
         self.assertTupleEqual(environment.parents, ())
-        self.assertDictEqual(environment.values, {
-            ('a', 0, 'b'): True,
-            ('a', 1, 'b'): False,
-            ('a', 2, 'b'): 'string',
-            ('a', 3, 'b'): 7,
-            ('a', 4, 'b'): 3.14,
-            ('a', 5, 'b'): 'asdf'
-        })
+        self.assertListEqual(environment.values, [
+            (('a', 0, 'b'), True, '', 0),
+            (('a', 1, 'b'), False, '', 0),
+            (('a', 2, 'b'), 'string', '', 0),
+            (('a', 3, 'b'), 7, '', 0),
+            (('a', 4, 'b'), 3.14, '', 0),
+            (('a', 5, 'b'), 'asdf', '', 0)
+        ])
 
 
 class TestEnvironments(TestCase):
@@ -59,20 +59,20 @@ class TestEnvironments(TestCase):
         environments = Environments()
         environment = environments.add_environment('env', [])
         environment2 = environments.add_environment('env2', ['env'])
-        self.assertIsNone(environments.add_environment('env2', []))
+        environments.add_environment('env2', [])
         self.assertListEqual(sorted(environments.keys()), ['env', 'env2'])
         self.assertIs(environment, environments['env'])
         self.assertEqual(environment.name, 'env')
         self.assertEqual(environment.parents, [])
-        self.assertEqual(environment.values, {})
+        self.assertEqual(environment.values, [])
         self.assertIs(environment2, environments['env2'])
         self.assertEqual(environment2.name, 'env2')
         self.assertEqual(environment2.parents, ['env'])
-        self.assertEqual(environment2.values, {})
+        self.assertEqual(environment2.values, [])
 
     def test_parse(self):
         environments = Environments()
-        environments.parse('''\
+        errors = environments.parse('''\
 # The first environment
 env1:
     a.a = "foo"
@@ -89,27 +89,29 @@ env2:
     a.d = false
     b.0 = "thud"
 ''')
+        self.assertListEqual(errors, [])
+        self.assertListEqual(environments.check(), [])
         self.assertListEqual(sorted(environments.keys()), ['env1', 'env2'])
         self.assertTupleEqual(environments['env1'].parents, ())
-        self.assertDictEqual(environments['env1'].values, {
-            ('a', 'a'): 'foo',
-            ('a', 'b'): 12,
-            ('a', 'c'): 12.5,
-            ('a', 'd'): True,
-            ('b', 0): 'bonk'
-        })
+        self.assertListEqual(environments['env1'].values, [
+            (('a', 'a'), 'foo', '', 3),
+            (('a', 'b'), 12, '', 4),
+            (('a', 'c'), 12.5, '', 5),
+            (('a', 'd'), True, '', 6),
+            (('b', 0), 'bonk', '', 7)
+        ])
         self.assertTupleEqual(environments['env2'].parents, ())
-        self.assertDictEqual(environments['env2'].values, {
-            ('a', 'a'): 'bar',
-            ('a', 'b'): 19,
-            ('a', 'c'): 19.5,
-            ('a', 'd'): False,
-            ('b', 0): 'thud'
-        })
+        self.assertListEqual(environments['env2'].values, [
+            (('a', 'a'), 'bar', '', 11),
+            (('a', 'b'), 19, '', 12),
+            (('a', 'c'), 19.5, '', 13),
+            (('a', 'd'), False, '', 14),
+            (('b', 0), 'thud', '', 15)
+        ])
 
     def test_parse_parent(self):
         environments = Environments()
-        environments.parse('''\
+        errors = environments.parse('''\
 base:
     a.a = "foo"
     a.b = 12
@@ -123,37 +125,272 @@ env(base, base2):
     a.d = "env a.d"
     a.e = "env a.e"
 ''')
+        self.assertListEqual(errors, [])
+        self.assertListEqual(environments.check(), [])
         self.assertListEqual(sorted(environments.keys()), ['base', 'base2', 'env'])
         self.assertTupleEqual(environments['base'].parents, ())
-        self.assertDictEqual(environments['base'].values, {
-            ('a', 'a'): 'foo',
-            ('a', 'b'): 12
-        })
+        self.assertListEqual(environments['base'].values, [
+            (('a', 'a'), 'foo', '', 2),
+            (('a', 'b'), 12, '', 3)
+        ])
         self.assertTupleEqual(environments['base2'].parents, ())
-        self.assertDictEqual(environments['base2'].values, {
-            ('b', 'a'): 'thud'
-        })
+        self.assertListEqual(environments['base2'].values, [
+            (('b', 'a'), 'thud', '', 6)
+        ])
         self.assertTupleEqual(environments['env'].parents, ('base', 'base2'))
-        self.assertDictEqual(environments['env'].values, {
-            ('a', 'b'): 19,
-            ('a', 'c'): 'bar',
-            ('a', 'd'): 'env a.d',
-            ('a', 'e'): 'env a.e'
-        })
+        self.assertListEqual(environments['env'].values, [
+            (('a', 'b'), 19, '', 9),
+            (('a', 'c'), 'bar', '', 10),
+            (('a', 'd'), 'env a.d', '', 11),
+            (('a', 'e'), 'env a.e', '', 12)
+        ])
 
-    def test_parse_error(self):
-        with self.assertRaises(SyntaxError) as exc_cm:
-            Environments().parse('''\
-env1:
+    def test_parse_errors(self):
+        environments = Environments()
+        errors = ['hello']
+        errors_parse = environments.parse('asdf', errors=errors)
+        self.assertIs(errors, errors_parse)
+        self.assertListEqual(errors, [
+            'hello',
+            ':1: Syntax error: "asdf"'
+        ])
+
+    def test_parse_syntax_error(self):
+        environments = Environments()
+        errors = environments.parse('''\
+env:
     a.a = "foo"
     a.b = foo
-    a.c = 12.5
+    a.c = 12
 ''')
-        self.assertEqual(str(exc_cm.exception), ':3: Syntax error : "    a.b = foo"')
+        self.assertListEqual(errors, [
+            ':3: Syntax error: "    a.b = foo"'
+        ])
+        self.assertListEqual(environments.check(), [])
+        self.assertListEqual(sorted(environments.keys()), ['env'])
+        self.assertTupleEqual(environments['env'].parents, ())
+        self.assertListEqual(environments['env'].values, [
+            (('a', 'a'), 'foo', '', 2),
+            (('a', 'c'), 12, '', 4)
+        ])
+
+    def test_parse_environment_redefinition(self): # pylint: disable=invalid-name
+        environments = Environments()
+        errors = environments.parse('''\
+env:
+    a = "foo"
+
+env(env2):
+    b = "bar"
+''')
+        self.assertListEqual(errors, [
+            ':4: Redefinition of environment "env"'
+        ])
+        self.assertListEqual(environments.check(), [])
+        self.assertListEqual(sorted(environments.keys()), ['env'])
+        self.assertTupleEqual(environments['env'].parents, ())
+        self.assertListEqual(environments['env'].values, [
+            (('a',), 'foo', '', 2),
+            (('b',), 'bar', '', 5)
+        ])
+
+    def test_parse_value_redefinition(self):
+        environments = Environments()
+        errors = environments.parse('''\
+env:
+    a = "foo"
+    a = "bar"
+''')
+        self.assertListEqual(errors, [
+            ':3: Redefinition of value "a"'
+        ])
+        self.assertListEqual(environments.check(), [])
+        self.assertListEqual(sorted(environments.keys()), ['env'])
+        self.assertTupleEqual(environments['env'].parents, ())
+        self.assertListEqual(environments['env'].values, [
+            (('a',), 'foo', '', 2)
+        ])
+
+    def test_parse_type_change(self):
+        environments = Environments()
+        errors = environments.parse('''\
+env:
+    a.b.0 = "env a.b.0"
+    a.b.1 = "env a.b.1"
+
+env2(env):
+    a.b.a = "env2 a.b.a"
+
+env3(env2):
+''', filename='test.config')
+        self.assertListEqual(errors, [])
+        self.assertListEqual(environments.check(), [
+            'test.config:6: Redefinition of container type "a.b"'
+        ])
+        self.assertListEqual(sorted(environments.keys()), ['env', 'env2', 'env3'])
+        self.assertEqual(environments['env'].name, 'env')
+        self.assertTupleEqual(environments['env'].parents, ())
+        self.assertListEqual(environments['env'].values, [
+            (('a', 'b', 0), 'env a.b.0', 'test.config', 2),
+            (('a', 'b', 1), 'env a.b.1', 'test.config', 3)
+        ])
+        self.assertEqual(environments['env2'].name, 'env2')
+        self.assertTupleEqual(environments['env2'].parents, ('env',))
+        self.assertListEqual(environments['env2'].values, [
+            (('a', 'b', 'a'), 'env2 a.b.a', 'test.config', 6)
+        ])
+        self.assertEqual(environments['env3'].name, 'env3')
+        self.assertTupleEqual(environments['env3'].parents, ('env2',))
+        self.assertListEqual(environments['env3'].values, [])
+
+    def test_check_no_errors(self):
+        environments = Environments()
+        errors = environments.parse('''\
+env:
+    a.b.c = 1
+
+env2(env):
+    a.b.c = 2
+    a.b.d = 3
+
+env3(env):
+    a.b.e = 4
+
+env4(env2, env3):
+    a.b.f = 5
+''')
+        self.assertListEqual(errors, [])
+        self.assertListEqual(environments.check(), [])
+        self.assertListEqual(sorted(environments.keys()), ['env', 'env2', 'env3', 'env4'])
+        self.assertEqual(environments['env'].name, 'env')
+        self.assertTupleEqual(environments['env'].parents, ())
+        self.assertListEqual(environments['env'].values, [
+            (('a', 'b', 'c'), 1, '', 2)
+        ])
+        self.assertEqual(environments['env2'].name, 'env2')
+        self.assertTupleEqual(environments['env2'].parents, ('env',))
+        self.assertListEqual(environments['env2'].values, [
+            (('a', 'b', 'c'), 2, '', 5),
+            (('a', 'b', 'd'), 3, '', 6)
+        ])
+        self.assertEqual(environments['env3'].name, 'env3')
+        self.assertTupleEqual(environments['env3'].parents, ('env',))
+        self.assertListEqual(environments['env3'].values, [
+            (('a', 'b', 'e'), 4, '', 9),
+        ])
+        self.assertEqual(environments['env4'].name, 'env4')
+        self.assertTupleEqual(environments['env4'].parents, ('env2', 'env3'))
+        self.assertListEqual(environments['env4'].values, [
+            (('a', 'b', 'f'), 5, '', 12),
+        ])
+
+    def test_check_errors(self):
+        environments = Environments()
+        errors = ['hello']
+        environments.add_environment('env', ['env2'], errors=errors)
+        environments.add_environment('env2', ['env'], errors=errors)
+        self.assertListEqual(errors, ['hello'])
+        errors_check = environments.check(errors=errors)
+        self.assertIs(errors_check, errors)
+        self.assertListEqual(errors, [
+            'hello',
+            ':0: Environment "env" has circular parent environment "env2"',
+            ':0: Environment "env2" has circular parent environment "env"'
+        ])
+
+    def test_check_unknown(self):
+        environments = Environments()
+        errors = environments.parse('''\
+env:
+    a.b.c = 1
+
+env2(env, env5):
+    a.b.c = 2
+    a.b.d = 3
+
+env3(env2):
+    a.b.e = 4
+''', filename='test.config')
+        self.assertListEqual(errors, [])
+        self.assertListEqual(environments.check(), [
+            'test.config:4: Environment "env2" has unknown parent environment "env5"'
+        ])
+        self.assertListEqual(sorted(environments.keys()), ['env', 'env2', 'env3'])
+        self.assertEqual(environments['env'].name, 'env')
+        self.assertTupleEqual(environments['env'].parents, ())
+        self.assertListEqual(environments['env'].values, [
+            (('a', 'b', 'c'), 1, 'test.config', 2)
+        ])
+        self.assertEqual(environments['env2'].name, 'env2')
+        self.assertTupleEqual(environments['env2'].parents, ('env', 'env5'))
+        self.assertListEqual(environments['env2'].values, [
+            (('a', 'b', 'c'), 2, 'test.config', 5),
+            (('a', 'b', 'd'), 3, 'test.config', 6)
+        ])
+        self.assertEqual(environments['env3'].name, 'env3')
+        self.assertTupleEqual(environments['env3'].parents, ('env2',))
+        self.assertListEqual(environments['env3'].values, [
+            (('a', 'b', 'e'), 4, 'test.config', 9),
+        ])
+
+    def test_check_circular(self):
+        environments = Environments()
+        errors = environments.parse('''\
+env(env2):
+
+env2(env):
+
+env3(env):
+''')
+        self.assertListEqual(errors, [])
+        self.assertListEqual(environments.check(), [
+            ':1: Environment "env" has circular parent environment "env2"',
+            ':3: Environment "env2" has circular parent environment "env"'
+        ])
+        self.assertListEqual(sorted(environments.keys()), ['env', 'env2', 'env3'])
+        self.assertEqual(environments['env'].name, 'env')
+        self.assertTupleEqual(environments['env'].parents, ('env2',))
+        self.assertListEqual(environments['env'].values, [])
+        self.assertEqual(environments['env2'].name, 'env2')
+        self.assertTupleEqual(environments['env2'].parents, ('env',))
+        self.assertListEqual(environments['env2'].values, [])
+        self.assertEqual(environments['env3'].name, 'env3')
+        self.assertTupleEqual(environments['env3'].parents, ('env',))
+        self.assertListEqual(environments['env3'].values, [])
+
+    def test_check_list_index(self):
+        environments = Environments()
+        errors = environments.parse('''\
+env:
+    a.0 = "env a.0"
+    b.1 = "env b.1"
+
+env2(env):
+    a.1 = "env2 a.1"
+    a.3 = "env2 a.3"
+''')
+        self.assertListEqual(errors, [])
+        self.assertListEqual(environments.check(), [
+            ':3: Invalid list index "b.1"',
+            ':7: Invalid list index "a.3"'
+        ])
+        self.assertListEqual(sorted(environments.keys()), ['env', 'env2'])
+        self.assertEqual(environments['env'].name, 'env')
+        self.assertTupleEqual(environments['env'].parents, ())
+        self.assertListEqual(environments['env'].values, [
+            (('a', 0), 'env a.0', '', 2),
+            (('b', 1), 'env b.1', '', 3)
+        ])
+        self.assertEqual(environments['env2'].name, 'env2')
+        self.assertTupleEqual(environments['env2'].parents, ('env',))
+        self.assertListEqual(environments['env2'].values, [
+            (('a', 1), 'env2 a.1', '', 6),
+            (('a', 3), 'env2 a.3', '', 7)
+        ])
 
     def test_asdict(self):
         environments = Environments()
-        environments.parse('''\
+        errors = environments.parse('''\
 common:
     a.a = "common a.a"
     a.d = "common a.d"
@@ -173,9 +410,11 @@ base2:
 env(base, base2):
     a.b = "env a.b"
     a.env = "env a.env"
-    b.2 = "env b.2"
+    b.1 = "env b.1"
     b.0 = "env b.0"
 ''')
+        self.assertListEqual(errors, [])
+        self.assertListEqual(environments.check(), [])
         self.assertDictEqual(environments.asdict('env'), {
             'a': {
                 'a': 'base a.a',
@@ -187,14 +426,13 @@ env(base, base2):
             },
             'b': [
                 'env b.0',
-                'base b.1',
-                'env b.2'
+                'env b.1'
             ]
         })
 
     def test_asdict_map_map(self):
         environments = Environments()
-        environments.parse('''\
+        errors = environments.parse('''\
 env:
     a.b.c = "env a.b.c"
     a.c.c = "env a.c.c"
@@ -206,6 +444,8 @@ env2(env):
     a.c.e = "env2 a.c.e"
     a.d.c = "env2 a.d.c"
 ''')
+        self.assertListEqual(errors, [])
+        self.assertListEqual(environments.check(), [])
         self.assertDictEqual(environments.asdict('env'), {
             'a': {
                 'b': {
@@ -236,7 +476,7 @@ env2(env):
 
     def test_asdict_map_list(self):
         environments = Environments()
-        environments.parse('''\
+        errors = environments.parse('''\
 env:
     a.a.0 = "env a.a.0"
     a.b.0 = "env a.b.0"
@@ -248,6 +488,8 @@ env2(env):
     a.b.2 = "env2 a.b.2"
     a.c.0 = "env2 a.c.0"
 ''')
+        self.assertListEqual(errors, [])
+        self.assertListEqual(environments.check(), [])
         self.assertDictEqual(environments.asdict('env'), {
             'a': {
                 'a': [
@@ -278,7 +520,7 @@ env2(env):
 
     def test_asdict_list_map(self):
         environments = Environments()
-        environments.parse('''\
+        errors = environments.parse('''\
 env:
     a.0.b = "env a.0.b"
     a.1.b = "env a.1.b"
@@ -288,6 +530,8 @@ env2(env):
     a.1.b = "env2 a.1.b"
     a.3.b = "env2 a.3.b"
 ''')
+        self.assertListEqual(errors, [])
+        self.assertListEqual(environments.check(), [])
         self.assertDictEqual(environments.asdict('env'), {
             'a': [
                 {'b': 'env a.0.b'},
@@ -306,7 +550,7 @@ env2(env):
 
     def test_asdict_list_list(self):
         environments = Environments()
-        environments.parse('''\
+        errors = environments.parse('''\
 env:
     a.0.0 = "env a.0.0"
     a.1.0 = "env a.1.0"
@@ -319,6 +563,8 @@ env2(env):
     a.2.2 = "env2 a.2.2"
     a.3.0 = "env2 a.3.0"
 ''')
+        self.assertListEqual(errors, [])
+        self.assertListEqual(environments.check(), [])
         self.assertDictEqual(environments.asdict('env'), {
             'a': [
                 ['env a.0.0'],
@@ -335,24 +581,60 @@ env2(env):
             ]
         })
 
-    def test_error_inconsistent_environment(self): # pylint: disable=invalid-name
-        with self.assertRaises(SyntaxError) as exc:
-            Environments().parse('''\
-foo:
-    a = "foo"
+    def test_asdict_circular(self):
+        environments = Environments()
+        environment = environments.add_environment('env', ['env2'])
+        environment.add_value('a', 'env a')
+        environment2 = environments.add_environment('env2', ['env'])
+        environment2.add_value('b', 'env2 b')
+        self.assertListEqual(sorted(environments.keys()), ['env', 'env2'])
+        self.assertDictEqual(environments.asdict('env'), {
+            'a': 'env a',
+            'b': 'env2 b'
+        })
+        self.assertDictEqual(environments.asdict('env2'), {
+            'a': 'env a',
+            'b': 'env2 b'
+        })
 
-foo(bar):
-    b = "bonk"
-''')
-        self.assertEqual(str(exc.exception), ':4: Redefinition of environment "foo"')
+    def test_asdict_unknown(self):
+        environments = Environments()
+        environment = environments.add_environment('env', ['env2'])
+        environment.add_value('a', 'env a')
+        self.assertListEqual(sorted(environments.keys()), ['env'])
+        self.assertDictEqual(environments.asdict('env'), {
+            'a': 'env a'
+        })
 
-    def test_error_value_redefinition(self):
-        with self.assertRaises(SyntaxError) as exc:
-            Environments().parse('''\
-foo:
-    a = "foo"
+    def test_asdict_list_index(self):
+        environments = Environments()
+        environment = environments.add_environment('env', [])
+        environment.add_value('a.0', 'env a.0')
+        environment.add_value('a.1', 'env a.1')
+        environment.add_value('b.1', 'env b.1')
+        self.assertListEqual(sorted(environments.keys()), ['env'])
+        self.assertDictEqual(environments.asdict('env'), {
+            'a': [
+                'env a.0',
+                'env a.1'
+            ]
+        })
 
-    # this should error
-    a = "bonk"
-''')
-        self.assertEqual(str(exc.exception), ':5: Redefinition of value "a"')
+    def test_asdict_type_change(self):
+        environments = Environments()
+        environment = environments.add_environment('env', [])
+        environment.add_value('a.0', 'env a.0')
+        environment.add_value('a.a', 'env a.a')
+        environment2 = environments.add_environment('env2', ['env'])
+        environment2.add_value('a.a', 'env2 a.a')
+        self.assertListEqual(sorted(environments.keys()), ['env', 'env2'])
+        self.assertDictEqual(environments.asdict('env'), {
+            'a': [
+                'env a.0'
+            ]
+        })
+        self.assertDictEqual(environments.asdict('env2'), {
+            'a': [
+                'env a.0'
+            ]
+        })

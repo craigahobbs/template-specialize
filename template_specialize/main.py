@@ -44,10 +44,11 @@ def main(argv=None):
 
     # Parse the environment files
     environments = Environments()
+    errors = []
     if args.environment_files:
         for environment_file in args.environment_files:
             with open(environment_file, 'r', encoding='utf-8') as f_environment:
-                environments.parse(f_environment, filename=environment_file)
+                environments.parse(f_environment, filename=environment_file, errors=errors)
 
     # Build the template variables dict
     if args.environment is None:
@@ -56,8 +57,11 @@ def main(argv=None):
         if args.environment not in environments:
             parser.error('unknown environment "{0}"'.format(args.environment))
         environment = environments.add_environment('', [args.environment])
-    for key, value in zip(args.keys, args.values):
-        environment.add_value(key, value)
+    for idx, (key, value) in enumerate(zip(args.keys, args.values)):
+        environment.add_value(key, value, lineno=idx + 1, errors=errors)
+    environments.check(errors=errors)
+    if errors:
+        parser.exit(message='\n'.join(errors) + '\n', status=2)
     template_variables = environments.asdict('')
 
     # Create the source and destination template file paths
