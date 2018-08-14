@@ -251,6 +251,9 @@ env:
 
 env(env2):
     b = "bar"
+
+env:
+    c = "bonk"
 ''')
         self.assertListEqual(errors, [
             ':4: Redefinition of environment "env"'
@@ -260,7 +263,8 @@ env(env2):
         self.assertTupleEqual(environments['env'].parents, ())
         self.assertListEqual(environments['env'].values, [
             (('a',), 'foo', '', 2),
-            (('b',), 'bar', '', 5)
+            (('b',), 'bar', '', 5),
+            (('c',), 'bonk', '', 8)
         ])
 
     def test_parse_value_redefinition(self):

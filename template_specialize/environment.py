@@ -10,9 +10,7 @@ import re
 class EnvironmentKeyValue(namedtuple('EnvironmentKeyValue', ('key', 'value', 'filename', 'lineno'))):
 
     def __new__(cls, key_str, value_str, filename='', lineno=0):
-        key = cls._parse_key(key_str)
-        value = cls._parse_value(value_str)
-        return super().__new__(cls, key, value, filename, lineno)
+        return super().__new__(cls, cls._parse_key(key_str), cls._parse_value(value_str), filename, lineno)
 
     @staticmethod
     def _parse_key_part(key_part):
@@ -47,7 +45,8 @@ class EnvironmentKeyValue(namedtuple('EnvironmentKeyValue', ('key', 'value', 'fi
         try:
             return super().__lt__(other)
         except TypeError:
-            part = next(part for part, other_part in zip(self.key, other.key) if not isinstance(part, type(other_part))) # pragma: no branch
+            key = self.key
+            part = next(part for part, other_part in zip(key, other.key) if not isinstance(part, type(other_part))) # pragma: no branch
             return isinstance(part, int)
 
 
@@ -59,19 +58,13 @@ class Environment(namedtuple('Environment', ('name', 'parents', 'values', 'filen
 
     def add_value(self, key_str, value_str, filename='', lineno=0, errors=None):
         key_value = EnvironmentKeyValue(key_str, value_str, filename, lineno)
-        skip = False
-
-        # Check for key redefinition
-        if any(other_key_value.key == key_value.key for other_key_value in self.values):
-            skip = True
+        key = key_value.key
+        if any(kv.key == key for kv in self.values):
             if errors is not None:
                 errors.append('{0}:{1}: Redefinition of value "{2}"'.format(filename, lineno, key_str))
-
-        if skip:
             return None
-        else:
-            self.values.append(key_value)
-            return key_value
+        self.values.append(key_value)
+        return key_value
 
 
 class Environments(dict):
@@ -84,7 +77,7 @@ class Environments(dict):
     def add_environment(self, name, parents, filename='', lineno=0, errors=None):
         environment = self.get(name)
         if environment is not None:
-            if errors is not None:
+            if parents != environment.parents and errors is not None:
                 errors.append('{0}:{1}: Redefinition of environment "{2}"'.format(filename, lineno, name))
         else:
             environment = self[name] = Environment(name, parents, filename=filename, lineno=lineno)
@@ -165,7 +158,8 @@ class Environments(dict):
     def _iterate_values(self, environment_name, errors=None):
         lists = {}
         types = {}
-        for key_value in self._iterate_values_inner(environment_name, set(), errors=errors):
+        circulars = set()
+        for key_value in self._iterate_values_inner(environment_name, circulars, errors=errors):
             key = key_value.key
             skip = False
 
