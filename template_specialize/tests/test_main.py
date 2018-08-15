@@ -20,6 +20,25 @@ class TestMain(TestCase):
     def test_module_main(self):
         self.assertTrue(template_specialize.__main__)
 
+    def test_sys_argv(self):
+        test_files = [
+            ('template.txt', 'the value of "foo" is "{{foo}}"')
+        ]
+        with self.create_test_files(test_files) as input_dir, \
+             self.create_test_files([]) as output_dir:
+            input_path = os.path.join(input_dir, 'template.txt')
+            output_path = os.path.join(output_dir, 'other.txt')
+            argv = ['template-specialize', input_path, output_path, '--key', 'foo', '--value', 'bar']
+            with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
+                 unittest_mock.patch('sys.stderr', new=StringIO()) as stderr, \
+                 unittest_mock.patch('sys.argv', argv):
+                main()
+
+            self.assertEqual(stdout.getvalue(), '')
+            self.assertEqual(stderr.getvalue(), '')
+            with open(os.path.join(output_dir, 'other.txt'), 'r', encoding='utf-8') as f_output:
+                self.assertEqual(f_output.read(), 'the value of "foo" is "bar"')
+
     def test_version(self):
         for argv in [
                 ['-v'],
@@ -75,10 +94,11 @@ usage: setup.py [-h] [-c FILE] [-e ENV] [--key KEY] [--value VALUE] [-v]
 setup.py: error: mismatched keys/values
 '''
             )
+
     def test_config_errors(self):
         test_files = [
             (
-                'config1.config',
+                'test.config',
                 '''\
 env1:
     a.a = "env1 a.a"
@@ -91,7 +111,7 @@ env2:
 '''
             ),
             (
-                'config2.config',
+                'test2.config',
                 '''\
 env3(env1, env2):
 '''
@@ -105,16 +125,16 @@ b.a = {{b.a}}
         ]
         with self.create_test_files(test_files) as input_dir, \
              self.create_test_files([]) as output_dir:
-            config1_path = os.path.join(input_dir, 'config1.config')
-            config2_path = os.path.join(input_dir, 'config2.config')
+            test_path = os.path.join(input_dir, 'test.config')
+            test2_path = os.path.join(input_dir, 'test2.config')
             input_path = os.path.join(input_dir, 'template.txt')
             output_path = os.path.join(output_dir, 'other.txt')
             with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
                  unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
                 with self.assertRaises(SystemExit) as cm_exc:
                     main([
-                        '-c', config1_path,
-                        '-c', config2_path,
+                        '-c', test_path,
+                        '-c', test2_path,
                         '-e', 'env3',
                         '--key', 'b.0', '--value', '- b.0',
                         input_path,
@@ -124,39 +144,20 @@ b.a = {{b.a}}
             self.assertEqual(cm_exc.exception.code, 2)
             self.assertEqual(stdout.getvalue(), '')
             self.assertEqual(
-                re.sub('^.+?config', 'config', stderr.getvalue(), flags=re.MULTILINE),
+                re.sub('^.+?test', 'test', stderr.getvalue(), flags=re.MULTILINE),
                 '''\
-config1.config:4: Syntax error: "    asdf1"
-config1.config:8: Syntax error: "    asdf2"
-config1.config:7: Redefinition of container type "a"
+test.config:4: Syntax error: "    asdf1"
+test.config:8: Syntax error: "    asdf2"
+test.config:7: Redefinition of container type "a"
 :1: Redefinition of container type "b"
 '''
             )
-            self.assertFalse(os.path.exists(os.path.join(output_dir, 'other.txt')))
-
-    def test_sys_argv(self):
-        test_files = [
-            ('template.txt', 'the value of "foo" is "{{foo}}"')
-        ]
-        with self.create_test_files(test_files) as input_dir, \
-             self.create_test_files([]) as output_dir:
-            input_path = os.path.join(input_dir, 'template.txt')
-            output_path = os.path.join(output_dir, 'other.txt')
-            argv = ['template-specialize', input_path, output_path, '--key', 'foo', '--value', 'bar']
-            with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
-                 unittest_mock.patch('sys.stderr', new=StringIO()) as stderr, \
-                 unittest_mock.patch('sys.argv', argv):
-                main()
-
-            self.assertEqual(stdout.getvalue(), '')
-            self.assertEqual(stderr.getvalue(), '')
-            with open(os.path.join(output_dir, 'other.txt'), 'r', encoding='utf-8') as f_output:
-                self.assertEqual(f_output.read(), 'the value of "foo" is "bar"')
+            self.assertFalse(os.path.exists(output_path))
 
     def test_environment_only(self):
         test_files = [
             (
-                'config1.config',
+                'test.config',
                 '''\
 env1:
     a.a = "foo"
@@ -168,7 +169,7 @@ env2:
 '''
             ),
             (
-                'config2.config',
+                'test2.config',
                 '''\
 env3(env1):
     a.b = "bar"
@@ -185,13 +186,13 @@ a.c = {{a.c}}
         ]
         with self.create_test_files(test_files) as input_dir, \
              self.create_test_files([]) as output_dir:
-            config1_path = os.path.join(input_dir, 'config1.config')
-            config2_path = os.path.join(input_dir, 'config2.config')
+            test_path = os.path.join(input_dir, 'test.config')
+            test2_path = os.path.join(input_dir, 'test2.config')
             input_path = os.path.join(input_dir, 'template.txt')
             output_path = os.path.join(output_dir, 'other.txt')
             with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
                  unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
-                main(['-c', config1_path, '-c', config2_path, '-e', 'env3', input_path, output_path])
+                main(['-c', test_path, '-c', test2_path, '-e', 'env3', input_path, output_path])
 
             self.assertEqual(stdout.getvalue(), '')
             self.assertEqual(stderr.getvalue(), '')
@@ -372,3 +373,19 @@ setup.py: error: unknown environment "unknown"
                 self.assertEqual(f_output.read(), 'the value of "foo" is "bar"')
             with open(os.path.join(output_dir, 'subdir', 'subtemplate.txt'), 'r', encoding='utf-8') as f_output:
                 self.assertEqual(f_output.read(), 'agree, "bar" is the value of "foo"')
+
+    def test_file_not_exist(self):
+        with self.create_test_files([]) as input_dir, \
+             self.create_test_files([]) as output_dir:
+            input_path = os.path.join(input_dir, 'template.txt')
+            output_path = os.path.join(output_dir, 'other.txt')
+            with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
+                 unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
+                with self.assertRaises(SystemExit) as cm_exc:
+                    main([input_path, output_path, '--key', 'foo', '--value', 'bar'])
+
+            self.assertEqual(cm_exc.exception.code, 2)
+            self.assertEqual(stdout.getvalue(), '')
+            self.assertEqual(stderr.getvalue(), 'no such file or directory "{0}"'.format(input_path))
+            self.assertFalse(os.path.exists(input_path))
+            self.assertFalse(os.path.exists(output_path))

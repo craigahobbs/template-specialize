@@ -65,7 +65,9 @@ def main(argv=None):
     template_variables = environments.asdict('')
 
     # Create the source and destination template file paths
-    if os.path.isfile(args.src_path):
+    if not os.path.exists(args.src_path):
+        parser.exit(message='no such file or directory "{0}"'.format(args.src_path), status=2)
+    elif os.path.isfile(args.src_path):
         src_files = [args.src_path]
         if args.dst_path.endswith(os.sep):
             dst_files = [os.path.join(args.dst_path, os.path.basename(args.src_path))]
@@ -78,5 +80,5 @@ def main(argv=None):
     # Process the template files
     for src_file, dst_file in zip(src_files, dst_files):
         os.makedirs(os.path.dirname(dst_file), exist_ok=True)
-        with open(src_file, 'r', encoding='utf-8') as f_from:
-            Template(f_from.read(), undefined=StrictUndefined).stream(**template_variables).dump(dst_file, encoding='utf-8')
+        with open(src_file, 'r', encoding='utf-8') as f_src:
+            Template(f_src.read(), undefined=StrictUndefined).stream(**template_variables).dump(dst_file, encoding='utf-8')
