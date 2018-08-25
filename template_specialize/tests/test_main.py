@@ -53,27 +53,6 @@ class TestMain(TestCase):
             self.assertEqual(stdout.getvalue(), '')
             self.assertEqual(stderr.getvalue(), str(__version__) + '\n')
 
-    def test_missing_src_and_dst(self):
-        for argv in [
-                [],
-                ['src.txt']
-        ]:
-            with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
-                 unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
-                with self.assertRaises(SystemExit) as cm_exc:
-                    main(argv)
-
-            self.assertEqual(cm_exc.exception.code, 2)
-            self.assertEqual(stdout.getvalue(), '')
-            self.assertEqual(
-                stderr.getvalue(),
-                '''\
-usage: setup.py [-h] [-c FILE] [-e ENV] [--key KEY] [--value VALUE] [-v]
-                [SRC] [DST]
-setup.py: error: missing source file/directory and/or destination file/directory
-'''
-            )
-
     def test_mismatched_keys_values(self):
         for argv in [
                 ['--key', 'a', 'src.txt', 'dst.txt'],
@@ -339,6 +318,41 @@ setup.py: error: unknown environment "unknown"
             with open(os.path.join(output_dir, 'other.txt'), 'r', encoding='utf-8') as f_output:
                 self.assertEqual(f_output.read(), 'the value of "foo" is "bar"')
 
+    def test_file_to_stdout(self):
+        test_files = [
+            ('template.txt', 'the value of "foo" is "{{foo}}"')
+        ]
+        with self.create_test_files(test_files) as input_dir:
+            input_path = os.path.join(input_dir, 'template.txt')
+            with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
+                 unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
+                main([input_path, '--key', 'foo', '--value', 'bar'])
+
+            self.assertEqual(stdout.getvalue(), 'the value of "foo" is "bar"')
+            self.assertEqual(stderr.getvalue(), '')
+
+    def test_stdin_to_stdout(self):
+        with unittest_mock.patch('sys.stdin', new=StringIO('the value of "foo" is "{{foo}}"')), \
+             unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
+             unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
+            main(['--key', 'foo', '--value', 'bar'])
+
+        self.assertEqual(stdout.getvalue(), 'the value of "foo" is "bar"')
+        self.assertEqual(stderr.getvalue(), '')
+
+    def test_stdin_to_file(self):
+        with self.create_test_files([]) as output_dir:
+            output_path = os.path.join(output_dir, 'other.txt')
+            with unittest_mock.patch('sys.stdin', new=StringIO('the value of "foo" is "{{foo}}"')), \
+                 unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
+                 unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
+                main(['-', output_path, '--key', 'foo', '--value', 'bar'])
+
+            self.assertEqual(stdout.getvalue(), '')
+            self.assertEqual(stderr.getvalue(), '')
+            with open(output_path, 'r', encoding='utf-8') as f_output:
+                self.assertEqual(f_output.read(), 'the value of "foo" is "bar"')
+
     def test_file_to_dir(self):
         test_files = [
             ('template.txt', 'the value of "foo" is "{{foo}}"')
@@ -349,12 +363,14 @@ setup.py: error: unknown environment "unknown"
             output_path = os.path.join(output_dir, '')
             with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
                  unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
-                main([input_path, output_path, '--key', 'foo', '--value', 'bar'])
+                with self.assertRaises(SystemExit) as cm_exc:
+                    main([input_path, output_path, '--key', 'foo', '--value', 'bar'])
 
+            self.assertEqual(cm_exc.exception.code, 2)
             self.assertEqual(stdout.getvalue(), '')
-            self.assertEqual(stderr.getvalue(), '')
-            with open(os.path.join(output_dir, 'template.txt'), 'r', encoding='utf-8') as f_output:
-                self.assertEqual(f_output.read(), 'the value of "foo" is "bar"')
+            self.assertEqual(stderr.getvalue(), "[Errno 21] Is a directory: '{0}'\n".format(output_path))
+            self.assertTrue(os.path.isfile(input_path))
+            self.assertTrue(os.path.isdir(output_path))
 
     def test_dir_to_dir(self):
         test_files = [
@@ -374,6 +390,25 @@ setup.py: error: unknown environment "unknown"
             with open(os.path.join(output_dir, 'subdir', 'subtemplate.txt'), 'r', encoding='utf-8') as f_output:
                 self.assertEqual(f_output.read(), 'agree, "bar" is the value of "foo"')
 
+    def test_dir_to_file(self):
+        test_files = [
+            (('subdir', 'template.txt'), 'the value of "foo" is "{{foo}}"'),
+            ('other.txt', 'hello')
+        ]
+        with self.create_test_files(test_files) as input_dir:
+            input_path = os.path.join(input_dir, 'subdir')
+            output_path = os.path.join(input_dir, 'other.txt')
+            with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
+                 unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
+                with self.assertRaises(SystemExit) as cm_exc:
+                    main([input_path, output_path, '--key', 'foo', '--value', 'bar'])
+
+            self.assertEqual(cm_exc.exception.code, 2)
+            self.assertEqual(stdout.getvalue(), '')
+            self.assertEqual(stderr.getvalue(), "[Errno 17] File exists: '{0}'\n".format(output_path))
+            self.assertTrue(os.path.isdir(input_path))
+            self.assertTrue(os.path.isfile(output_path))
+
     def test_file_not_exist(self):
         with self.create_test_files([]) as input_dir, \
              self.create_test_files([]) as output_dir:
@@ -386,6 +421,6 @@ setup.py: error: unknown environment "unknown"
 
             self.assertEqual(cm_exc.exception.code, 2)
             self.assertEqual(stdout.getvalue(), '')
-            self.assertEqual(stderr.getvalue(), 'no such file or directory "{0}"'.format(input_path))
+            self.assertEqual(stderr.getvalue(), "[Errno 2] No such file or directory: '{0}'\n".format(input_path))
             self.assertFalse(os.path.exists(input_path))
             self.assertFalse(os.path.exists(output_path))
