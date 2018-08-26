@@ -7,14 +7,12 @@ import argparse
 from itertools import chain
 import os
 import sys
+import warnings
 
-try:
-    from jinja2 import Template, StrictUndefined
-except ImportError: # pragma: no cover
-    pass
+from jinja2 import Template, StrictUndefined
+import yaml
 
 from . import __version__ as VERSION
-from .environment import Environments
 
 
 def main(argv=None):
@@ -42,26 +40,26 @@ def main(argv=None):
         parser.error('mismatched keys/values')
 
     # Parse the environment files
-    environments = Environments()
-    errors = []
+    environments = {}
     if args.environment_files:
         for environment_file in args.environment_files:
-            with open(environment_file, 'r', encoding='utf-8') as f_environment:
-                environments.parse(f_environment, filename=environment_file, errors=errors)
+            try:
+                with open(environment_file, 'r', encoding='utf-8') as f_environment:
+                    _parse_environments(f_environment, environments)
+            except Exception as exc: # pylint: disable=broad-except
+                parser.exit(message=str(exc) + '\n', status=2)
 
     # Build the template variables dict
-    if args.environment is None:
-        environment = environments.add_environment('', [])
-    else:
-        if args.environment not in environments:
-            parser.error('unknown environment "{0}"'.format(args.environment))
-        environment = environments.add_environment('', [args.environment])
-    for idx, (key, value) in enumerate(zip(args.keys, args.values)):
-        environment.add_value(key, value, lineno=idx + 1, errors=errors)
-    environments.check(errors=errors)
-    if errors:
-        parser.exit(message='\n'.join(errors) + '\n', status=2)
-    template_variables = environments.asdict('')
+    template_variables = {}
+    if args.environment is not None:
+        try:
+            _merge_environment(environments, args.environment, template_variables, set())
+        except Exception as exc: # pylint: disable=broad-except
+            parser.exit(message=str(exc) + '\n', status=2)
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore', DeprecationWarning)
+        for key, value in zip(args.keys, args.values):
+            _merge_values({key: yaml.load(value)}, template_variables)
 
     # Create the source template file paths
     is_dir = False
@@ -101,3 +99,71 @@ def main(argv=None):
                     f_src.close()
     except Exception as exc: # pylint: disable=broad-except
         parser.exit(message=str(exc) + '\n', status=2)
+
+
+def _parse_environments(environment_yaml, environments):
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore', DeprecationWarning)
+        loaded_environments = yaml.load(environment_yaml)
+    if not isinstance(loaded_environments, dict):
+        raise ValueError('invalid environments container: {0!r:.100s}'.format(loaded_environments))
+    for environment_name, environment_info in loaded_environments.items():
+        if not isinstance(environment_name, str):
+            raise ValueError('invalid environment name {0!r:.100s}'.format(environment_name))
+        if environment_name in environments:
+            raise ValueError('redefinition of environment {0!r:.100s}'.format(environment_name))
+        if not isinstance(environment_info, dict):
+            raise ValueError('invalid environment metadata for environment {0!r:.100s}: {1!r:.100s}'.format(
+                environment_name, environment_info
+            ))
+        environment_parents = environment_info.get('parents')
+        if (environment_parents is not None and not isinstance(environment_parents, list)) or \
+           (environment_parents is not None and not all(isinstance(name, str) for name in environment_parents)):
+            raise ValueError('invalid parents for environment {0!r:.100s}: {1!r:.100s}'.format(
+                environment_name, environment_parents
+            ))
+        environment_values = environment_info.get('values')
+        if environment_values is not None and not isinstance(environment_values, dict):
+            raise ValueError('invalid values for environment {0!r:.100s}: {1!r:.100s}'.format(
+                environment_name, environment_values
+            ))
+        environments[environment_name] = environment_info
+
+
+def _merge_environment(environments, name, values, visited):
+    environment = environments.get(name)
+    if environment is None:
+        raise ValueError('unknown environment {0!r:.100}'.format(name))
+    environment_parents = environment.get('parents')
+    if environment_parents is not None:
+        for environment_parent in environment_parents:
+            if environment_parent in visited:
+                raise ValueError('circular inheritance with environment {0!r:.100s}'.format(environment_parent))
+            visited.add(environment_parent)
+            values = _merge_environment(environments, environment_parent, values, visited)
+            visited.remove(environment_parent)
+    environment_values = environment.get('values')
+    if environment_values is not None:
+        values = _merge_values(environment_values, values)
+    return values
+
+
+def _merge_values(src, dst):
+    if isinstance(src, list):
+        if not isinstance(dst, list):
+            dst = []
+        len_dst = len(dst)
+        for idx, src_value in enumerate(src):
+            if idx < len_dst:
+                dst[idx] = _merge_values(src_value, dst[idx])
+            else:
+                dst.append(_merge_values(src_value, None))
+        return dst
+    elif isinstance(src, dict):
+        if not isinstance(dst, dict):
+            dst = {}
+        for key, src_value in src.items():
+            dst[key] = _merge_values(src_value, dst.get(key))
+        return dst
+    else:
+        return src

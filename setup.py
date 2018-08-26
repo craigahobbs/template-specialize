@@ -28,7 +28,8 @@ setup(
     ],
     packages=['template_specialize'],
     install_requires=[
-        'jinja2 >= 2.9',
+        'jinja2 >= 2.10',
+        'pyyaml >= 3.13'
     ],
     entry_points={
         'console_scripts': ['template-specialize = template_specialize.main:main'],

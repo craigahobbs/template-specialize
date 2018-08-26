@@ -10,7 +10,7 @@ import unittest.mock as unittest_mock
 
 from template_specialize import __version__
 import template_specialize.__main__
-from template_specialize.main import main
+from template_specialize.main import main, _parse_environments, _merge_environment, _merge_values
 
 from . import TestCase
 
@@ -80,23 +80,29 @@ setup.py: error: mismatched keys/values
                 'test.config',
                 '''\
 env1:
-    a.a = "env1 a.a"
-    b.a = "env1 b.a"
+  values:
+    a:
+      a: "env1 a.a"
+    b:
+      a: "env1 b.a"
     asdf1
 
 env2:
-    a.0 = "env2 a.0"
+  values:
+    a: ["env2 a.0"]
     asdf2
 '''
             ),
             (
                 'test2.config',
                 '''\
-env3(env1, env2):
+env3:
+    parents: [env1, env2]
 '''
             ),
             (
-                'template.txt', '''\
+                'template.txt',
+                '''\
 a.a = {{a.a}}
 b.a = {{b.a}}
 '''
@@ -115,7 +121,7 @@ b.a = {{b.a}}
                         '-c', test_path,
                         '-c', test2_path,
                         '-e', 'env3',
-                        '--key', 'b.0', '--value', '- b.0',
+                        '--key', 'b', '--value', '[b0]',
                         input_path,
                         output_path
                     ])
@@ -125,10 +131,10 @@ b.a = {{b.a}}
             self.assertEqual(
                 re.sub('^.+?test', 'test', stderr.getvalue(), flags=re.MULTILINE),
                 '''\
-test.config:4: Syntax error: "    asdf1"
-test.config:8: Syntax error: "    asdf2"
-test.config:7: Redefinition of container type "a"
-:1: Redefinition of container type "b"
+while scanning a simple key
+test.config", line 7, column 5
+could not find expected ':'
+test.config", line 9, column 1
 '''
             )
             self.assertFalse(os.path.exists(output_path))
@@ -139,20 +145,26 @@ test.config:7: Redefinition of container type "a"
                 'test.config',
                 '''\
 env1:
-    a.a = "foo"
-    a.c.1 = 2
-    a.c.0 = 1
+  values:
+    a:
+      a: "foo"
+      c: [1, 2]
 
 env2:
-    b.a = "nope"
+  values:
+    b:
+      a: "nope"
 '''
             ),
             (
                 'test2.config',
                 '''\
-env3(env1):
-    a.b = "bar"
-    a.c.2 = 3
+env3:
+  parents: [env1]
+  values:
+    a:
+      b: "bar"
+      c: [4, 5, 3]
 '''
             ),
             (
@@ -181,13 +193,14 @@ a.c = {{a.c}}
                     '''\
 a.a = foo
 a.b = bar
-a.c = [1, 2, 3]'''
+a.c = [4, 5, 3]'''
                 )
 
     def test_keys_only(self):
         test_files = [
             (
-                'template.txt', '''\
+                'template.txt',
+                '''\
 a.a = {{a.a}}
 a.b = {{a.b}}
 a.c = {{a.c}}
@@ -201,9 +214,9 @@ a.c = {{a.c}}
             with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
                  unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
                 main([
-                    '--key', 'a.a', '--value', 'foo',
-                    '--key', 'a.b', '--value', 'bar',
-                    '--key', 'a.c.0', '--value', '3',
+                    '--key', 'a', '--value', '{a: foo}',
+                    '--key', 'a', '--value', '{b: bar}',
+                    '--key', 'a', '--value', '{c: [3]}',
                     input_path,
                     output_path
                 ])
@@ -225,13 +238,16 @@ a.c = [3]'''
                 'config.config',
                 '''\
 env:
-    a.a = "foo"
-    a.b = "bar"
-    a.c.0 = 1
+  values:
+    a:
+      a: foo
+      b: bar
+      c: [1]
 '''
             ),
             (
-                'template.txt', '''\
+                'template.txt',
+                '''\
 a.a = {{a.a}}
 a.b = {{a.b}}
 a.c = {{a.c}}
@@ -248,12 +264,12 @@ a.c = {{a.c}}
                 main([
                     '-c', config_path,
                     '-e', 'env',
-                    '--key', 'a.b',
-                    '--value', 'bonk',
-                    '--key', 'a.c.0',
-                    '--value', '10',
-                    '--key', 'a.c.1',
-                    '--value', '11',
+                    '--key', 'a',
+                    '--value', '{b: bonk}',
+                    '--key', 'a',
+                    '--value', '{c: [10]}',
+                    '--key', 'a',
+                    '--value', '{c: [12, 11]}',
                     input_path,
                     output_path
                 ])
@@ -266,7 +282,7 @@ a.c = {{a.c}}
                     '''\
 a.a = foo
 a.b = bonk
-a.c = [10, 11]'''
+a.c = [12, 11]'''
                 )
 
     def test_unknown_environment(self):
@@ -275,7 +291,9 @@ a.c = [10, 11]'''
                 'config.config',
                 '''\
 env:
-    a.a = "foo"
+  values:
+    a:
+      a: foo
 '''
             )
         ]
@@ -295,9 +313,7 @@ env:
                 self.assertEqual(
                     stderr.getvalue(),
                     '''\
-usage: setup.py [-h] [-c FILE] [-e ENV] [--key KEY] [--value VALUE] [-v]
-                [SRC] [DST]
-setup.py: error: unknown environment "unknown"
+unknown environment 'unknown'
 '''
                 )
 
@@ -424,3 +440,280 @@ setup.py: error: unknown environment "unknown"
             self.assertEqual(stderr.getvalue(), "[Errno 2] No such file or directory: '{0}'\n".format(input_path))
             self.assertFalse(os.path.exists(input_path))
             self.assertFalse(os.path.exists(output_path))
+
+
+class TestParseEnvironments(TestCase):
+
+    def test_parse_environments(self):
+        environments = {}
+        _parse_environments(
+            StringIO('''\
+# This is a comment
+env:
+    values:
+        key: value
+
+env2:
+    parents: [env]
+    values:
+        key: value
+'''),
+            environments
+        )
+        self.assertDictEqual(environments, {
+            'env': {
+                'values': {
+                    'key': 'value'
+                }
+            },
+            'env2': {
+                'parents': ['env'],
+                'values': {
+                    'key': 'value'
+                }
+            }
+        })
+
+    def test_parse_environments_not_dict(self):
+        environments = {}
+        with self.assertRaises(ValueError) as cm_exc:
+            _parse_environments(
+                StringIO('''\
+[1, 2, 3]
+'''),
+                environments
+            )
+        self.assertEqual(str(cm_exc.exception), 'invalid environments container: [1, 2, 3]')
+        self.assertDictEqual(environments, {})
+
+    def test_parse_environments_invalid_environment_name(self):
+        environments = {}
+        with self.assertRaises(ValueError) as cm_exc:
+            _parse_environments(
+                StringIO('''\
+1:
+'''),
+                environments
+            )
+        self.assertEqual(str(cm_exc.exception), 'invalid environment name 1')
+        self.assertDictEqual(environments, {})
+
+    def test_parse_environments_redefined_environment(self):
+        environments = {'env': {}}
+        with self.assertRaises(ValueError) as cm_exc:
+            _parse_environments(
+                StringIO('''\
+env:
+'''),
+                environments
+            )
+        self.assertEqual(str(cm_exc.exception), "redefinition of environment 'env'")
+        self.assertDictEqual(environments, {'env': {}})
+
+    def test_parse_environments_invalid_metadata(self):
+        environments = {}
+        with self.assertRaises(ValueError) as cm_exc:
+            _parse_environments(
+                StringIO('''\
+env: [1, 2, 3]
+'''),
+                environments
+            )
+        self.assertEqual(str(cm_exc.exception), "invalid environment metadata for environment 'env': [1, 2, 3]")
+        self.assertDictEqual(environments, {})
+
+    def test_parse_environments_invalid_parents_non_list(self):
+        environments = {}
+        with self.assertRaises(ValueError) as cm_exc:
+            _parse_environments(
+                StringIO('''\
+env:
+  parents: {}
+'''),
+                environments
+            )
+        self.assertEqual(str(cm_exc.exception), "invalid parents for environment 'env': {}")
+        self.assertDictEqual(environments, {})
+
+    def test_parse_environments_invalid_parents_non_str(self):
+        environments = {}
+        with self.assertRaises(ValueError) as cm_exc:
+            _parse_environments(
+                StringIO('''\
+env:
+  parents: ['env2', 1]
+'''),
+                environments
+            )
+        self.assertEqual(str(cm_exc.exception), "invalid parents for environment 'env': ['env2', 1]")
+        self.assertDictEqual(environments, {})
+
+    def test_parse_environments_invalid_values(self):
+        environments = {}
+        with self.assertRaises(ValueError) as cm_exc:
+            _parse_environments(
+                StringIO('''\
+env:
+  values: []
+'''),
+                environments
+            )
+        self.assertEqual(str(cm_exc.exception), "invalid values for environment 'env': []")
+        self.assertDictEqual(environments, {})
+
+
+class TestMergeEnvironment(TestCase):
+
+    def test_merge_environment(self):
+        environments = {
+            'env': {
+                'values': {
+                    'a': 1,
+                    'b': 2,
+                    'c': [{'a': 'b'}]
+                }
+            },
+            'env2': {
+                'parents': ['env'],
+                'values': {
+                    'a': 3,
+                    'c': [{'a', 'b2'}, {'c': 'd'}],
+                    'd': 4
+                }
+            },
+            'env3': {
+                'parents': ['env', 'env2'],
+                'values': {
+                    'c': [{'c': 'd3'}],
+                    'e': 5
+                }
+            },
+            'env4': {
+                'parents': ['env3']
+            }
+        }
+
+        values = _merge_environment(environments, 'env', None, set())
+        self.assertDictEqual(values, {
+            'a': 1,
+            'b': 2,
+            'c': [{'a': 'b'}]
+        })
+
+        values = {}
+        values2 = _merge_environment(environments, 'env2', values, set())
+        self.assertIs(values2, values)
+        self.assertDictEqual(values, {
+            'a': 3,
+            'b': 2,
+            'c': [{'b2', 'a'}, {'c': 'd'}],
+            'd': 4
+        })
+
+        values = {}
+        values2 = _merge_environment(environments, 'env3', values, set())
+        self.assertIs(values2, values)
+        self.assertDictEqual(values, {
+            'a': 3,
+            'b': 2,
+            'c': [{'c': 'd3'}, {'c': 'd'}],
+            'd': 4,
+            'e': 5
+        })
+
+        values = {}
+        values2 = _merge_environment(environments, 'env4', values, set())
+        self.assertIs(values2, values)
+        self.assertDictEqual(values, {
+            'a': 3,
+            'b': 2,
+            'c': [{'c': 'd3'}, {'c': 'd'}],
+            'd': 4,
+            'e': 5
+        })
+
+    def test_merge_environment_unknown(self):
+        environments = {
+            'env': {
+                'parents': ['unknown']
+            }
+        }
+        with self.assertRaises(ValueError) as cm_exc:
+            _merge_environment(environments, 'env2', None, set())
+        self.assertEqual(str(cm_exc.exception), "unknown environment 'env2'")
+        with self.assertRaises(ValueError) as cm_exc:
+            _merge_environment(environments, 'env', None, set())
+        self.assertEqual(str(cm_exc.exception), "unknown environment 'unknown'")
+
+    def test_merge_environment_circular(self):
+        environments = {
+            'env': {
+                'parents': ['env'],
+                'values': {
+                    'a': 1,
+                    'b': 2,
+                    'c': [{'a': 'b'}]
+                }
+            }
+        }
+        with self.assertRaises(ValueError) as cm_exc:
+            _merge_environment(environments, 'env', None, set())
+        self.assertEqual(str(cm_exc.exception), "circular inheritance with environment 'env'")
+
+    def test_merge_values(self):
+        values = {}
+        values2 = _merge_values({
+            'a': 'b',
+            'b': [1, 2, 3],
+            'c': {'a': 'b', 'c': 'd'},
+            'd': [{'a': 'b'}, {'c': 'd'}],
+            'e': {'a': [1, 2, 3], 'b': [4, 5, 6]},
+            'f': 1
+        }, values)
+        self.assertIs(values, values2)
+        self.assertDictEqual(values, {
+            'a': 'b',
+            'b': [1, 2, 3],
+            'c': {'a': 'b', 'c': 'd'},
+            'd': [{'a': 'b'}, {'c': 'd'}],
+            'e': {'a': [1, 2, 3], 'b': [4, 5, 6]},
+            'f': 1
+        })
+
+        values2 = _merge_values({
+            'a': 'b2',
+            'b': [4, 5],
+            'c': {'a': 'b2', 'e': 'f'},
+            'd': [{'e': 'f'}, {'c': 'd2'}, {'g': 'h'}],
+            'e': {'a': [4, 5], 'b': [7, 8, 9, 10]},
+            'g': 2
+        }, values)
+        self.assertIs(values, values2)
+        self.assertDictEqual(values, {
+            'a': 'b2',
+            'b': [4, 5, 3],
+            'c': {'a': 'b2', 'c': 'd', 'e': 'f'},
+            'd': [{'a': 'b', 'e': 'f'}, {'c': 'd2'}, {'g': 'h'}],
+            'e': {'a': [4, 5, 3], 'b': [7, 8, 9, 10]},
+            'f': 1,
+            'g': 2
+        })
+
+        values2 = _merge_values({
+            'a': [1, 2, 3],
+            'f': {'a': 'b'},
+            'b': 3,
+            'd': {'c': 'd'},
+            'c': 4,
+            'e': [4, 5, 6]
+        }, values)
+        self.assertIs(values, values2)
+        self.assertDictEqual(values, {
+            'a': [1, 2, 3],
+            'b': 3,
+            'c': 4,
+            'd': {'c': 'd'},
+            'e': [4, 5, 6],
+            'f': {'a': 'b'},
+            'g': 2
+        })
