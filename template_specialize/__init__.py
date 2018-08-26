@@ -3,4 +3,4 @@
 # Licensed under the MIT License
 # https://github.com/craigahobbs/template-specialize/blob/master/LICENSE
 
-__version__ = '0.4'
+__version__ = '0.5'
