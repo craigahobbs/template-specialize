@@ -51,15 +51,15 @@ def main(argv=None):
 
     # Build the template variables dict
     template_variables = {}
-    if args.environment is not None:
-        try:
+    try:
+        if args.environment is not None:
             _merge_environment(environments, args.environment, template_variables, set())
-        except Exception as exc: # pylint: disable=broad-except
-            parser.exit(message=str(exc) + '\n', status=2)
-    with warnings.catch_warnings():
-        warnings.simplefilter('ignore', DeprecationWarning)
-        for key, value in zip(args.keys, args.values):
-            _merge_values({key: yaml.load(value)}, template_variables)
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore', DeprecationWarning)
+            for key, value in zip(args.keys, args.values):
+                _merge_values({key: yaml.load(value)}, template_variables)
+    except Exception as exc: # pylint: disable=broad-except
+        parser.exit(message=str(exc) + '\n', status=2)
 
     # Create the source template file paths
     is_dir = False

@@ -74,6 +74,24 @@ setup.py: error: mismatched keys/values
 '''
             )
 
+    def test_invalid_keys_values(self):
+        with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
+             unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
+            with self.assertRaises(SystemExit) as cm_exc:
+                main(['--key', 'a', '--value', 'a: b: c'])
+
+        self.assertEqual(cm_exc.exception.code, 2)
+        self.assertEqual(stdout.getvalue(), '')
+        self.assertEqual(
+            stderr.getvalue(),
+            '''\
+mapping values are not allowed here
+  in "<unicode string>", line 1, column 5:
+    a: b: c
+        ^
+'''
+        )
+
     def test_config_errors(self):
         test_files = [
             (
