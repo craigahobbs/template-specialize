@@ -68,7 +68,8 @@ class TestMain(TestCase):
             self.assertEqual(
                 stderr.getvalue(),
                 '''\
-usage: setup.py [-h] [-c FILE] [-e ENV] [--key KEY] [--value VALUE] [-v]
+usage: setup.py [-h] [-c FILE] [-e ENV] [--key KEY] [--value VALUE] [--dump]
+                [-v]
                 [SRC] [DST]
 setup.py: error: mismatched keys/values
 '''
@@ -302,6 +303,46 @@ a.a = foo
 a.b = bonk
 a.c = [12, 11]'''
                 )
+
+    def test_dump(self):
+        test_files = [
+            (
+                'config.config',
+                '''\
+env:
+  values:
+    a:
+      a: foo
+      b: bar
+      c: [1]
+'''
+            )
+        ]
+        with self.create_test_files(test_files) as input_dir:
+            config_path = os.path.join(input_dir, 'config.config')
+            with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
+                 unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
+                with self.assertRaises(SystemExit) as cm_exc:
+                    main([
+                        '-c', config_path,
+                        '-e', 'env',
+                        '--key', 'a',
+                        '--value', '{b: bonk}',
+                        '--key', 'a',
+                        '--value', '{c: [12, 11]}',
+                        '--dump'
+                    ])
+
+            self.assertEqual(cm_exc.exception.code, 0)
+            self.assertEqual(stdout.getvalue(), '')
+            self.assertEqual(stderr.getvalue(), '''\
+a:
+  a: foo
+  b: bonk
+  c:
+  - 12
+  - 11
+''')
 
     def test_unknown_environment(self):
         test_files = [

@@ -31,6 +31,8 @@ def main(argv=None):
                         help='add a template key. Must be paired with a template value.')
     parser.add_argument('--value', action='append', dest='values', metavar='VALUE', default=[],
                         help='add a template value. Must be paired with a template key.')
+    parser.add_argument('--dump', action='store_true',
+                        help='dump the template variables')
     parser.add_argument('-v', '--version', action='store_true',
                         help='show version number and quit')
     args = parser.parse_args(args=argv)
@@ -60,6 +62,10 @@ def main(argv=None):
                 _merge_values({key: yaml.load(value)}, template_variables)
     except Exception as exc: # pylint: disable=broad-except
         parser.exit(message=str(exc) + '\n', status=2)
+
+    # Dump the template variables, if necessary
+    if args.dump:
+        parser.exit(message=yaml.dump(template_variables, default_flow_style=False))
 
     # Create the source template file paths
     is_dir = False
