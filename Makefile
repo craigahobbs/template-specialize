@@ -6,5 +6,8 @@ PYTHON_VERSIONS := \
     3.5.5 \
     3.4.8
 
-$(shell if [ ! -f .makefile ]; then curl -s -o .makefile 'https://raw.githubusercontent.com/craigahobbs/chisel/master/Makefile.base'; fi)
+ifeq '$(wildcard .makefile)' ''
+    $(info Downloading base makefile...)
+    $(shell curl -s -o .makefile 'https://raw.githubusercontent.com/craigahobbs/chisel/master/Makefile.base')
+endif
 include .makefile
