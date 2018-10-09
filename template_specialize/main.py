@@ -9,10 +9,11 @@ import os
 import sys
 import warnings
 
-from jinja2 import Template, StrictUndefined
+from jinja2 import Environment, StrictUndefined
 import yaml
 
 from . import __version__ as VERSION
+from .aws_parameterstore import ParameterStoreExtension
 
 
 def main(argv=None):
@@ -85,6 +86,11 @@ def main(argv=None):
     else:
         dst_files = [args.dst_path]
 
+    environment = Environment(
+        extensions=[ParameterStoreExtension],
+        undefined=StrictUndefined,
+    )
+
     # Process the template files
     try:
         for src_file, dst_file in zip(src_files, dst_files):
@@ -99,7 +105,7 @@ def main(argv=None):
                     dst_encoding = 'utf-8'
                 else:
                     dst_encoding = None
-                Template(f_src.read(), undefined=StrictUndefined).stream(**template_variables).dump(dst_file, encoding=dst_encoding)
+                environment.from_string(f_src.read()).stream(**template_variables).dump(dst_file, encoding=dst_encoding)
             finally:
                 if f_src is not src_file:
                     f_src.close()

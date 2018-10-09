@@ -8,6 +8,11 @@ import os
 import re
 import unittest.mock as unittest_mock
 
+try:
+    import botocore.exceptions
+except ImportError: # pragma: nocover
+    pass
+
 from template_specialize import __version__
 import template_specialize.__main__
 from template_specialize.main import main, _parse_environments, _merge_environment, _merge_values
@@ -405,6 +410,78 @@ unknown environment 'unknown'
 
             self.assertEqual(stdout.getvalue(), 'the value of "foo" is "bar"')
             self.assertEqual(stderr.getvalue(), '')
+
+    def test_aws_parameterstore(self):
+        test_files = [
+            (
+                'template.txt',
+                '''\
+{% filter tojson %}{% aws_parameterstore 'some/string' %}{% endfilter %}
+{% aws_parameterstore 'some/string' %}
+{% aws_parameterstore foo %}
+'''
+            )
+        ]
+
+        def get_parameter(**kwargs):
+            return {
+                'Parameter': {
+                    'Value': '{0}-{{value}}'.format(kwargs['Name'])
+                }
+            }
+
+        with self.create_test_files(test_files) as input_dir:
+            input_path = os.path.join(input_dir, 'template.txt')
+            with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
+                 unittest_mock.patch('sys.stderr', new=StringIO()) as stderr, \
+                 unittest_mock.patch('botocore.session') as mock_session:
+                mock_session.get_session.return_value.create_client.return_value.get_parameter.side_effect = get_parameter
+                main([input_path, '--key', 'foo', '--value', 'a"[bar}'])
+
+            self.assertEqual(
+                stdout.getvalue(),
+                '''\
+"some/string-{value}"
+some/string-{value}
+a"[bar}-{value}'''
+            )
+            self.assertEqual(stderr.getvalue(), '')
+
+            # get_parameter results should be cached between blocks.
+            mock_session.get_session.return_value.create_client.return_value.assert_has_calls([
+                unittest_mock.call.get_parameter(Name='some/string', WithDecryption=True),
+                unittest_mock.call.get_parameter(Name='a"[bar}', WithDecryption=True)
+            ])
+
+    def test_aws_parameterstore_client_error(self):
+        test_files = [
+            (
+                'template.txt',
+                '''\
+{% aws_parameterstore 'some/string' %}
+'''
+            )
+        ]
+
+        with self.create_test_files(test_files) as input_dir:
+            input_path = os.path.join(input_dir, 'template.txt')
+            with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
+                 unittest_mock.patch('sys.stderr', new=StringIO()) as stderr, \
+                 unittest_mock.patch('botocore.session') as mock_session:
+                mock_session.get_session.return_value.create_client.return_value.get_parameter.side_effect = \
+                    botocore.exceptions.ClientError({'Error': {'Code': 'SomeError'}}, 'GetParameter')
+
+                with self.assertRaises(SystemExit) as cm_exc:
+                    main([input_path, '--key', 'foo', '--value', 'a"[bar}'])
+
+            self.assertEqual(cm_exc.exception.code, 2)
+            self.assertEqual(stdout.getvalue(), '')
+            self.assertEqual(
+                stderr.getvalue(),
+                '''\
+Failed to retrieve value "some/string" from parameter store with error: SomeError
+'''
+            )
 
     def test_stdin_to_stdout(self):
         with unittest_mock.patch('sys.stdin', new=StringIO('the value of "foo" is "{{foo}}"')), \

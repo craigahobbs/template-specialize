@@ -34,5 +34,8 @@ setup(
     entry_points={
         'console_scripts': ['template-specialize = template_specialize.main:main'],
     },
-    test_suite='template_specialize.tests'
+    test_suite='template_specialize.tests',
+    tests_require=[
+        'botocore >= 1.0.0'
+    ]
 )
