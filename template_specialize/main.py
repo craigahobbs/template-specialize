@@ -1,5 +1,3 @@
-# Copyright (C) 2017-2018 Craig Hobbs
-#
 # Licensed under the MIT License
 # https://github.com/craigahobbs/template-specialize/blob/master/LICENSE
 
@@ -9,10 +7,11 @@ import os
 import sys
 import warnings
 
-from jinja2 import Template, StrictUndefined
+from jinja2 import Environment, StrictUndefined
 import yaml
 
 from . import __version__ as VERSION
+from .aws_parameter_store import ParameterStoreExtension
 
 
 def main(argv=None):
@@ -86,6 +85,7 @@ def main(argv=None):
         dst_files = [args.dst_path]
 
     # Process the template files
+    environment = Environment(extensions=[ParameterStoreExtension], undefined=StrictUndefined)
     try:
         for src_file, dst_file in zip(src_files, dst_files):
             if is_dir:
@@ -95,11 +95,10 @@ def main(argv=None):
             else:
                 f_src = src_file
             try:
+                dst_encoding = None
                 if isinstance(dst_file, str):
                     dst_encoding = 'utf-8'
-                else:
-                    dst_encoding = None
-                Template(f_src.read(), undefined=StrictUndefined).stream(**template_variables).dump(dst_file, encoding=dst_encoding)
+                environment.from_string(f_src.read()).stream(**template_variables).dump(dst_file, encoding=dst_encoding)
             finally:
                 if f_src is not src_file:
                     f_src.close()

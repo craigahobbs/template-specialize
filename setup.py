@@ -1,5 +1,3 @@
-# Copyright (C) 2017-2018 Craig Hobbs
-#
 # Licensed under the MIT License
 # https://github.com/craigahobbs/template-specialize/blob/master/LICENSE
 
@@ -34,5 +32,8 @@ setup(
     entry_points={
         'console_scripts': ['template-specialize = template_specialize.main:main'],
     },
-    test_suite='template_specialize.tests'
+    test_suite='template_specialize.tests',
+    tests_require=[
+        'botocore >= 1.0.0'
+    ]
 )

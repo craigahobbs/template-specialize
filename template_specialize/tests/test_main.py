@@ -1,5 +1,3 @@
-# Copyright (C) 2017-2018 Craig Hobbs
-#
 # Licensed under the MIT License
 # https://github.com/craigahobbs/template-specialize/blob/master/LICENSE
 
@@ -7,6 +5,11 @@ from io import StringIO
 import os
 import re
 import unittest.mock as unittest_mock
+
+try:
+    import botocore.exceptions
+except ImportError: # pragma: nocover
+    pass
 
 from template_specialize import __version__
 import template_specialize.__main__
@@ -499,6 +502,78 @@ unknown environment 'unknown'
             self.assertEqual(stderr.getvalue(), "[Errno 2] No such file or directory: '{0}'\n".format(input_path))
             self.assertFalse(os.path.exists(input_path))
             self.assertFalse(os.path.exists(output_path))
+
+    def test_aws_parameter_store(self):
+        test_files = [
+            (
+                'template.txt',
+                '''\
+{% filter tojson %}{% aws_parameter_store 'some/string' %}{% endfilter %}
+{% aws_parameter_store 'some/string' %}
+{% aws_parameter_store foo %}
+'''
+            )
+        ]
+
+        def get_parameter(**kwargs):
+            return {
+                'Parameter': {
+                    'Value': '{0}-{{value}}'.format(kwargs['Name'])
+                }
+            }
+
+        with self.create_test_files(test_files) as input_dir:
+            input_path = os.path.join(input_dir, 'template.txt')
+            with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
+                 unittest_mock.patch('sys.stderr', new=StringIO()) as stderr, \
+                 unittest_mock.patch('botocore.session') as mock_session:
+                mock_session.get_session.return_value.create_client.return_value.get_parameter.side_effect = get_parameter
+                main([input_path, '--key', 'foo', '--value', 'a"[bar}'])
+
+            self.assertEqual(
+                stdout.getvalue(),
+                '''\
+"some/string-{value}"
+some/string-{value}
+a"[bar}-{value}'''
+            )
+            self.assertEqual(stderr.getvalue(), '')
+
+            # get_parameter results should be cached between blocks.
+            mock_session.get_session.return_value.create_client.return_value.assert_has_calls([
+                unittest_mock.call.get_parameter(Name='some/string', WithDecryption=True),
+                unittest_mock.call.get_parameter(Name='a"[bar}', WithDecryption=True)
+            ])
+
+    def test_aws_parameter_store_error(self):
+        test_files = [
+            (
+                'template.txt',
+                '''\
+{% aws_parameter_store 'some/string' %}
+'''
+            )
+        ]
+
+        with self.create_test_files(test_files) as input_dir:
+            input_path = os.path.join(input_dir, 'template.txt')
+            with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
+                 unittest_mock.patch('sys.stderr', new=StringIO()) as stderr, \
+                 unittest_mock.patch('botocore.session') as mock_session:
+                mock_session.get_session.return_value.create_client.return_value.get_parameter.side_effect = \
+                    botocore.exceptions.ClientError({'Error': {'Code': 'SomeError'}}, 'GetParameter')
+
+                with self.assertRaises(SystemExit) as cm_exc:
+                    main([input_path])
+
+            self.assertEqual(cm_exc.exception.code, 2)
+            self.assertEqual(stdout.getvalue(), '')
+            self.assertEqual(
+                stderr.getvalue(),
+                '''\
+Failed to retrieve value "some/string" from parameter store with error: SomeError
+'''
+            )
 
 
 class TestParseEnvironments(TestCase):
