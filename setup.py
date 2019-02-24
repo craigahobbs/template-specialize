@@ -5,6 +5,10 @@ from setuptools import setup
 
 import template_specialize
 
+TESTS_REQUIRE = [
+    'botocore >= 1.0.0'
+]
+
 setup(
     name='template-specialize',
     version=template_specialize.__version__,
@@ -33,7 +37,8 @@ setup(
         'console_scripts': ['template-specialize = template_specialize.main:main'],
     },
     test_suite='template_specialize.tests',
-    tests_require=[
-        'botocore >= 1.0.0'
-    ]
+    tests_require=TESTS_REQUIRE,
+    extras_require={
+        'tests': TESTS_REQUIRE
+    }
 )

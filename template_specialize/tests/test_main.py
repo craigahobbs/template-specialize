@@ -71,10 +71,10 @@ class TestMain(TestCase):
             self.assertEqual(
                 stderr.getvalue(),
                 '''\
-usage: setup.py [-h] [-c FILE] [-e ENV] [--key KEY] [--value VALUE] [--dump]
-                [-v]
-                [SRC] [DST]
-setup.py: error: mismatched keys/values
+usage: template-specialize [-h] [-c FILE] [-e ENV] [--key KEY] [--value VALUE]
+                           [--dump] [-v]
+                           [SRC] [DST]
+template-specialize: error: mismatched keys/values
 '''
             )
 

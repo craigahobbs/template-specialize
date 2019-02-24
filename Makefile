@@ -1,8 +1,8 @@
 PACKAGE_NAME := template_specialize
 
 PYTHON_VERSIONS := \
-    3.7.1 \
-    3.6.7 \
+    3.7.2 \
+    3.6.8 \
     3.5.6 \
     3.4.9
 

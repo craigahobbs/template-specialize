@@ -17,7 +17,7 @@ from .aws_parameter_store import ParameterStoreExtension
 def main(argv=None):
 
     # Command line parsing
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(prog='template-specialize')
     parser.add_argument('src_path', metavar='SRC', nargs='?',
                         help='the source template file or directory')
     parser.add_argument('dst_path', metavar='DST', nargs='?',
