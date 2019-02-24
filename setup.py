@@ -38,7 +38,7 @@ def main():
             'Programming Language :: Python :: 3.5',
             'Programming Language :: Python :: 3.6',
             'Programming Language :: Python :: 3.7',
-            "Topic :: Utilities",
+            'Topic :: Utilities'
         ],
         package_dir={'': 'src'},
         packages=[MODULE_NAME],
