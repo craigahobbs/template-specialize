@@ -3,8 +3,7 @@ PACKAGE_NAME := template_specialize
 PYTHON_VERSIONS := \
     3.7.2 \
     3.6.8 \
-    3.5.6 \
-    3.4.9
+    3.5.6
 
 ifeq '$(wildcard .makefile)' ''
     $(info Downloading base makefile...)
