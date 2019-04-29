@@ -44,7 +44,7 @@ def main():
         packages=[MODULE_NAME],
         install_requires=[
             'jinja2 >= 2.10',
-            'pyyaml >= 3.13'
+            'pyyaml >= 5.1'
         ],
         entry_points={
             'console_scripts': [PACKAGE_NAME + ' = ' + MODULE_NAME + '.main:main'],

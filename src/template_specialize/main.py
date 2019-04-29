@@ -58,7 +58,7 @@ def main(argv=None):
         with warnings.catch_warnings():
             warnings.simplefilter('ignore', DeprecationWarning)
             for key, value in zip(args.keys, args.values):
-                _merge_values({key: yaml.load(value)}, template_variables)
+                _merge_values({key: yaml.full_load(value)}, template_variables)
     except Exception as exc: # pylint: disable=broad-except
         parser.exit(message=str(exc) + '\n', status=2)
 
@@ -109,7 +109,7 @@ def main(argv=None):
 def _parse_environments(environment_yaml, environments):
     with warnings.catch_warnings():
         warnings.simplefilter('ignore', DeprecationWarning)
-        loaded_environments = yaml.load(environment_yaml)
+        loaded_environments = yaml.full_load(environment_yaml)
     if not isinstance(loaded_environments, dict):
         raise ValueError('invalid environments container: {0!r:.100s}'.format(loaded_environments))
     for environment_name, environment_info in loaded_environments.items():
