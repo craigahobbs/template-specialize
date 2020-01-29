@@ -164,11 +164,10 @@ def _merge_values(src, dst):
             else:
                 dst.append(_merge_values(src_value, None))
         return dst
-    elif isinstance(src, dict):
+    if isinstance(src, dict):
         if not isinstance(dst, dict):
             dst = {}
         for key, src_value in src.items():
             dst[key] = _merge_values(src_value, dst.get(key))
         return dst
-    else:
-        return src
+    return src
