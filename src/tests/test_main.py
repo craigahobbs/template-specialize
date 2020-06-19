@@ -4,6 +4,7 @@
 from io import StringIO
 import os
 import re
+import sys
 import unittest.mock as unittest_mock
 
 try:
@@ -19,6 +20,10 @@ from . import TestCase
 
 
 class TestMain(TestCase):
+
+    def test_console_script(self):
+        console_script_path = os.path.join(os.path.dirname(sys.executable), 'template-specialize')
+        self.assertTrue(os.path.isfile(console_script_path))
 
     def test_module_main(self):
         self.assertTrue(template_specialize.__main__)
