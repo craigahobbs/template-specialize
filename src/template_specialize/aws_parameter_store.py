@@ -16,7 +16,7 @@ class ParameterStoreExtension(Extension):
     tags = set(['aws_parameter_store'])
 
     def __init__(self, environment):
-        super(ParameterStoreExtension, self).__init__(environment)
+        super().__init__(environment)
         environment.extend(aws_parameter_store_client=None, aws_parameter_store_values={})
 
     def parse(self, parser):
