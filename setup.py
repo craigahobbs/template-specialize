@@ -42,9 +42,7 @@ def main():
             'Programming Language :: Python :: 3.10',
             'Topic :: Utilities'
         ],
-        package_dir={
-            '': 'src'
-        },
+        package_dir={'': 'src'},
         packages=[MODULE_NAME],
         install_requires=[
             'jinja2 >= 2.10',
