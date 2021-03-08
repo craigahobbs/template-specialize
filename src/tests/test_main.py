@@ -73,15 +73,7 @@ class TestMain(TestCase):
 
             self.assertEqual(cm_exc.exception.code, 2)
             self.assertEqual(stdout.getvalue(), '')
-            self.assertEqual(
-                stderr.getvalue(),
-                '''\
-usage: template-specialize [-h] [-c FILE] [-e ENV] [--key KEY] [--value VALUE]
-                           [--dump] [-v]
-                           [SRC] [DST]
-template-specialize: error: mismatched keys/values
-'''
-            )
+            self.assertTrue(stderr.getvalue().endswith('template-specialize: error: mismatched keys/values\n'))
 
     def test_invalid_keys_values(self):
         with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \

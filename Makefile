@@ -1,20 +1,28 @@
 PYTHON_VERSIONS := \
     3.9 \
+    3.10-rc \
     3.8 \
     3.7 \
     3.6
 
-PYLINT_ARGS := --disable=missing-docstring
+# Download Python Build base makefile
+ifeq '$(wildcard Makefile.base)' ''
+    $(info Downloading Makefile.base)
+    $(shell curl -s -o Makefile.base 'https://raw.githubusercontent.com/craigahobbs/python-build/master/Makefile.base')
+endif
 
-ifeq '$(wildcard .makefile)' ''
-    $(info Downloading base makefile...)
-    $(shell curl -s -o .makefile 'https://raw.githubusercontent.com/craigahobbs/chisel/master/Makefile.base')
-endif
+# Download Python Build's pylintrc
 ifeq '$(wildcard pylintrc)' ''
-    $(info Downloading pylintrc...)
-    $(shell curl -s -o pylintrc 'https://raw.githubusercontent.com/craigahobbs/chisel/master/pylintrc')
+    $(info Downloading pylintrc)
+    $(shell curl -s -o pylintrc 'https://raw.githubusercontent.com/craigahobbs/python-build/master/pylintrc')
 endif
-include .makefile
+
+# Include Python Build
+include Makefile.base
 
 clean:
-	rm -rf .makefile pylintrc
+	rm -rf Makefile.base pylintrc
+
+TESTS_REQUIRE := "botocore >= 1.0.0"
+
+PYLINT_ARGS := $(PYLINT_ARGS) --disable=missing-docstring
