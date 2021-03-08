@@ -9,6 +9,12 @@ template-specialize is a recursive [Jinja2](https://pypi.org/project/Jinja2/) te
 renderer (specializer).
 
 
+## Links
+
+- [Package on pypi](https://pypi.org/project/template-specialize/)
+- [Source code on GitHub](https://github.com/craigahobbs/template-specialize)
+
+
 ## Usage
 
 ```
