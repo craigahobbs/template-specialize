@@ -1,5 +1,5 @@
 # Licensed under the MIT License
-# https://github.com/craigahobbs/template-specialize/blob/master/LICENSE
+# https://github.com/craigahobbs/template-specialize/blob/main/LICENSE
 
 import unittest.mock as unittest_mock
 
