@@ -91,7 +91,7 @@ def main(argv=None):
             if is_dir:
                 os.makedirs(os.path.dirname(dst_file), exist_ok=True)
             if isinstance(src_file, str):
-                f_src = open(src_file, 'r', encoding='utf-8')
+                f_src = open(src_file, 'r', encoding='utf-8') # pylint: disable=consider-using-with
             else:
                 f_src = src_file
             try:
