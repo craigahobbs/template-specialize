@@ -1,10 +1,13 @@
 # Licensed under the MIT License
 # https://github.com/craigahobbs/template-specialize/blob/main/LICENSE
 
+from contextlib import contextmanager
 from io import StringIO
 import os
 import re
 import sys
+from tempfile import TemporaryDirectory
+import unittest
 import unittest.mock as unittest_mock
 
 try:
@@ -16,10 +19,25 @@ from template_specialize import __version__
 import template_specialize.__main__
 from template_specialize.main import main, _parse_environments, _merge_environment, _merge_values
 
-from . import TestCase
+
+# Helper context manager to create a list of files in a temporary directory
+@contextmanager
+def create_test_files(file_defs):
+    tempdir = TemporaryDirectory() # pylint: disable=consider-using-with
+    try:
+        for path_parts, content in file_defs:
+            if isinstance(path_parts, str):
+                path_parts = [path_parts]
+            path = os.path.join(tempdir.name, *path_parts)
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, 'w', encoding='utf-8') as file_:
+                file_.write(content)
+        yield tempdir.name
+    finally:
+        tempdir.cleanup()
 
 
-class TestMain(TestCase):
+class TestMain(unittest.TestCase):
 
     def test_console_script(self):
         console_script_path = os.path.join(os.path.dirname(sys.executable), 'template-specialize')
@@ -32,8 +50,8 @@ class TestMain(TestCase):
         test_files = [
             ('template.txt', 'the value of "foo" is "{{foo}}"')
         ]
-        with self.create_test_files(test_files) as input_dir, \
-             self.create_test_files([]) as output_dir:
+        with create_test_files(test_files) as input_dir, \
+             create_test_files([]) as output_dir:
             input_path = os.path.join(input_dir, 'template.txt')
             output_path = os.path.join(output_dir, 'other.txt')
             argv = ['template-specialize', input_path, output_path, '--key', 'foo', '--value', 'bar']
@@ -127,8 +145,8 @@ b.a = {{b.a}}
 '''
             )
         ]
-        with self.create_test_files(test_files) as input_dir, \
-             self.create_test_files([]) as output_dir:
+        with create_test_files(test_files) as input_dir, \
+             create_test_files([]) as output_dir:
             test_path = os.path.join(input_dir, 'test.config')
             test2_path = os.path.join(input_dir, 'test2.config')
             input_path = os.path.join(input_dir, 'template.txt')
@@ -194,8 +212,8 @@ a.c = {{a.c}}
 '''
             )
         ]
-        with self.create_test_files(test_files) as input_dir, \
-             self.create_test_files([]) as output_dir:
+        with create_test_files(test_files) as input_dir, \
+             create_test_files([]) as output_dir:
             test_path = os.path.join(input_dir, 'test.config')
             test2_path = os.path.join(input_dir, 'test2.config')
             input_path = os.path.join(input_dir, 'template.txt')
@@ -226,8 +244,8 @@ a.c = {{a.c}}
 '''
             )
         ]
-        with self.create_test_files(test_files) as input_dir, \
-             self.create_test_files([]) as output_dir:
+        with create_test_files(test_files) as input_dir, \
+             create_test_files([]) as output_dir:
             input_path = os.path.join(input_dir, 'template.txt')
             output_path = os.path.join(output_dir, 'other.txt')
             with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
@@ -273,8 +291,8 @@ a.c = {{a.c}}
 '''
             )
         ]
-        with self.create_test_files(test_files) as input_dir, \
-             self.create_test_files([]) as output_dir:
+        with create_test_files(test_files) as input_dir, \
+             create_test_files([]) as output_dir:
             config_path = os.path.join(input_dir, 'config.config')
             input_path = os.path.join(input_dir, 'template.txt')
             output_path = os.path.join(output_dir, 'other.txt')
@@ -318,7 +336,7 @@ env:
 '''
             )
         ]
-        with self.create_test_files(test_files) as input_dir:
+        with create_test_files(test_files) as input_dir:
             config_path = os.path.join(input_dir, 'config.config')
             with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
                  unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
@@ -356,7 +374,7 @@ env:
 '''
             )
         ]
-        with self.create_test_files(test_files) as input_dir:
+        with create_test_files(test_files) as input_dir:
             config_path = os.path.join(input_dir, 'config.config')
             for argv in [
                     ['-c', config_path, '-e', 'unknown', 'src.txt', 'dst.txt'],
@@ -380,8 +398,8 @@ unknown environment 'unknown'
         test_files = [
             ('template.txt', 'the value of "foo" is "{{foo}}"')
         ]
-        with self.create_test_files(test_files) as input_dir, \
-             self.create_test_files([]) as output_dir:
+        with create_test_files(test_files) as input_dir, \
+             create_test_files([]) as output_dir:
             input_path = os.path.join(input_dir, 'template.txt')
             output_path = os.path.join(output_dir, 'other.txt')
             with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
@@ -397,7 +415,7 @@ unknown environment 'unknown'
         test_files = [
             ('template.txt', 'the value of "foo" is "{{foo}}"')
         ]
-        with self.create_test_files(test_files) as input_dir:
+        with create_test_files(test_files) as input_dir:
             input_path = os.path.join(input_dir, 'template.txt')
             with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
                  unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
@@ -416,7 +434,7 @@ unknown environment 'unknown'
         self.assertEqual(stderr.getvalue(), '')
 
     def test_stdin_to_file(self):
-        with self.create_test_files([]) as output_dir:
+        with create_test_files([]) as output_dir:
             output_path = os.path.join(output_dir, 'other.txt')
             with unittest_mock.patch('sys.stdin', new=StringIO('the value of "foo" is "{{foo}}"')), \
                  unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
@@ -432,8 +450,8 @@ unknown environment 'unknown'
         test_files = [
             ('template.txt', 'the value of "foo" is "{{foo}}"')
         ]
-        with self.create_test_files(test_files) as input_dir, \
-             self.create_test_files([]) as output_dir:
+        with create_test_files(test_files) as input_dir, \
+             create_test_files([]) as output_dir:
             input_path = os.path.join(input_dir, 'template.txt')
             output_path = os.path.join(output_dir, '')
             with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
@@ -452,8 +470,8 @@ unknown environment 'unknown'
             ('template.txt', 'the value of "foo" is "{{foo}}"'),
             (('subdir', 'subtemplate.txt'), 'agree, "{{foo}}" is the value of "foo"')
         ]
-        with self.create_test_files(test_files) as input_dir, \
-             self.create_test_files([]) as output_dir:
+        with create_test_files(test_files) as input_dir, \
+             create_test_files([]) as output_dir:
             with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
                  unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
                 main([input_dir, output_dir, '--key', 'foo', '--value', 'bar'])
@@ -470,7 +488,7 @@ unknown environment 'unknown'
             (('subdir', 'template.txt'), 'the value of "foo" is "{{foo}}"'),
             ('other.txt', 'hello')
         ]
-        with self.create_test_files(test_files) as input_dir:
+        with create_test_files(test_files) as input_dir:
             input_path = os.path.join(input_dir, 'subdir')
             output_path = os.path.join(input_dir, 'other.txt')
             with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
@@ -485,8 +503,8 @@ unknown environment 'unknown'
             self.assertTrue(os.path.isfile(output_path))
 
     def test_file_not_exist(self):
-        with self.create_test_files([]) as input_dir, \
-             self.create_test_files([]) as output_dir:
+        with create_test_files([]) as input_dir, \
+             create_test_files([]) as output_dir:
             input_path = os.path.join(input_dir, 'template.txt')
             output_path = os.path.join(output_dir, 'other.txt')
             with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
@@ -519,7 +537,7 @@ unknown environment 'unknown'
                 }
             }
 
-        with self.create_test_files(test_files) as input_dir:
+        with create_test_files(test_files) as input_dir:
             input_path = os.path.join(input_dir, 'template.txt')
             with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
                  unittest_mock.patch('sys.stderr', new=StringIO()) as stderr, \
@@ -552,7 +570,7 @@ a"[bar}-{value}'''
             )
         ]
 
-        with self.create_test_files(test_files) as input_dir:
+        with create_test_files(test_files) as input_dir:
             input_path = os.path.join(input_dir, 'template.txt')
             with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
                  unittest_mock.patch('sys.stderr', new=StringIO()) as stderr, \
@@ -573,7 +591,7 @@ Failed to retrieve value "some/string" from parameter store with error: SomeErro
             )
 
 
-class TestParseEnvironments(TestCase):
+class TestParseEnvironments(unittest.TestCase):
 
     def test_parse_environments(self):
         environments = {}
@@ -693,7 +711,7 @@ env:
         self.assertDictEqual(environments, {})
 
 
-class TestMergeEnvironment(TestCase):
+class TestMergeEnvironment(unittest.TestCase):
 
     def test_merge_environment(self):
         environments = {

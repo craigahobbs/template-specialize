@@ -1,6 +1,7 @@
 # Licensed under the MIT License
 # https://github.com/craigahobbs/template-specialize/blob/main/LICENSE
 
+import unittest
 import unittest.mock as unittest_mock
 
 try:
@@ -10,10 +11,8 @@ except ImportError: # pragma: nocover
 from jinja2 import Environment, StrictUndefined, TemplateRuntimeError
 from template_specialize.aws_parameter_store import ParameterStoreExtension
 
-from . import TestCase
 
-
-class TestAWSParameterStore(TestCase):
+class TestAWSParameterStore(unittest.TestCase):
 
     @staticmethod
     def _get_parameter(**kwargs):
