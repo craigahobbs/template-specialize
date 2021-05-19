@@ -40,5 +40,3 @@ options:
 ## Development
 
 This project is developed using [Python Build](https://github.com/craigahobbs/python-build#readme).
-Refer to the Python Build [documentation](https://github.com/craigahobbs/python-build#make-targets)
-for development instructions.
