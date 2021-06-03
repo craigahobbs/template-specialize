@@ -4,10 +4,7 @@
 import unittest
 import unittest.mock as unittest_mock
 
-try:
-    import botocore.exceptions
-except ImportError: # pragma: nocover
-    pass
+import botocore.exceptions
 from jinja2 import Environment, StrictUndefined, TemplateRuntimeError
 from template_specialize.aws_parameter_store import ParameterStoreExtension
 

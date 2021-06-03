@@ -10,11 +10,7 @@ from tempfile import TemporaryDirectory
 import unittest
 import unittest.mock as unittest_mock
 
-try:
-    import botocore.exceptions
-except ImportError: # pragma: nocover
-    pass
-
+import botocore.exceptions
 from template_specialize import __version__
 import template_specialize.__main__
 from template_specialize.main import main, _parse_environments, _merge_environment, _merge_values
