@@ -18,9 +18,7 @@ renderer (specializer).
 ## Usage
 
 ```
-usage: template-specialize [-h] [-c FILE] [-e ENV] [--key KEY] [--value VALUE]
-                           [--dump] [-v]
-                           [SRC] [DST]
+usage: template-specialize [-h] [-c FILE] [-e ENV] [--key KEY] [--value VALUE] [--dump] [-v] [SRC] [DST]
 
 positional arguments:
   SRC            the source template file or directory
