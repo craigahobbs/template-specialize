@@ -38,8 +38,6 @@ class ParameterStoreExtension(Extension):
                 self.environment.aws_parameter_store_values[name] = result['Parameter']['Value']
             except botocore.exceptions.ClientError as ex:
                 code = ex.response.get('Error', {}).get('Code')
-                raise TemplateRuntimeError(
-                    'Failed to retrieve value "{0}" from parameter store with error: {1}'.format(name, code)
-                ) from None
+                raise TemplateRuntimeError(f'Failed to retrieve value "{name}" from parameter store with error: {code}') from None
 
         return self.environment.aws_parameter_store_values[name]

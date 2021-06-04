@@ -15,7 +15,7 @@ class TestAWSParameterStore(unittest.TestCase):
     def _get_parameter(**kwargs):
         return {
             'Parameter': {
-                'Value': '{0}-{{value}}'.format(kwargs['Name'])
+                'Value': f'{kwargs["Name"]}-{{value}}'
             }
         }
 

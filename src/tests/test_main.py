@@ -457,7 +457,7 @@ unknown environment 'unknown'
 
             self.assertEqual(cm_exc.exception.code, 2)
             self.assertEqual(stdout.getvalue(), '')
-            self.assertEqual(stderr.getvalue(), "[Errno 21] Is a directory: '{0}'\n".format(output_path))
+            self.assertEqual(stderr.getvalue(), f"[Errno 21] Is a directory: '{output_path}'\n")
             self.assertTrue(os.path.isfile(input_path))
             self.assertTrue(os.path.isdir(output_path))
 
@@ -494,7 +494,7 @@ unknown environment 'unknown'
 
             self.assertEqual(cm_exc.exception.code, 2)
             self.assertEqual(stdout.getvalue(), '')
-            self.assertEqual(stderr.getvalue(), "[Errno 17] File exists: '{0}'\n".format(output_path))
+            self.assertEqual(stderr.getvalue(), f"[Errno 17] File exists: '{output_path}'\n")
             self.assertTrue(os.path.isdir(input_path))
             self.assertTrue(os.path.isfile(output_path))
 
@@ -510,7 +510,7 @@ unknown environment 'unknown'
 
             self.assertEqual(cm_exc.exception.code, 2)
             self.assertEqual(stdout.getvalue(), '')
-            self.assertEqual(stderr.getvalue(), "[Errno 2] No such file or directory: '{0}'\n".format(input_path))
+            self.assertEqual(stderr.getvalue(), f"[Errno 2] No such file or directory: '{input_path}'\n")
             self.assertFalse(os.path.exists(input_path))
             self.assertFalse(os.path.exists(output_path))
 
@@ -529,7 +529,7 @@ unknown environment 'unknown'
         def get_parameter(**kwargs):
             return {
                 'Parameter': {
-                    'Value': '{0}-{{value}}'.format(kwargs['Name'])
+                    'Value': f'{kwargs["Name"]}-{{value}}'
                 }
             }
 

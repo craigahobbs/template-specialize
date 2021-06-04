@@ -111,39 +111,33 @@ def _parse_environments(environment_yaml, environments):
         warnings.simplefilter('ignore', DeprecationWarning)
         loaded_environments = yaml.full_load(environment_yaml)
     if not isinstance(loaded_environments, dict):
-        raise ValueError('invalid environments container: {0!r:.100s}'.format(loaded_environments))
+        raise ValueError(f'invalid environments container: {loaded_environments!r:.100s}')
     for environment_name, environment_info in loaded_environments.items():
         if not isinstance(environment_name, str):
-            raise ValueError('invalid environment name {0!r:.100s}'.format(environment_name))
+            raise ValueError(f'invalid environment name {environment_name!r:.100s}')
         if environment_name in environments:
-            raise ValueError('redefinition of environment {0!r:.100s}'.format(environment_name))
+            raise ValueError(f'redefinition of environment {environment_name!r:.100s}')
         if not isinstance(environment_info, dict):
-            raise ValueError('invalid environment metadata for environment {0!r:.100s}: {1!r:.100s}'.format(
-                environment_name, environment_info
-            ))
+            raise ValueError(f'invalid environment metadata for environment {environment_name!r:.100s}: {environment_info!r:.100s}')
         environment_parents = environment_info.get('parents')
         if (environment_parents is not None and not isinstance(environment_parents, list)) or \
            (environment_parents is not None and not all(isinstance(name, str) for name in environment_parents)):
-            raise ValueError('invalid parents for environment {0!r:.100s}: {1!r:.100s}'.format(
-                environment_name, environment_parents
-            ))
+            raise ValueError(f'invalid parents for environment {environment_name!r:.100s}: {environment_parents!r:.100s}')
         environment_values = environment_info.get('values')
         if environment_values is not None and not isinstance(environment_values, dict):
-            raise ValueError('invalid values for environment {0!r:.100s}: {1!r:.100s}'.format(
-                environment_name, environment_values
-            ))
+            raise ValueError(f'invalid values for environment {environment_name!r:.100s}: {environment_values!r:.100s}')
         environments[environment_name] = environment_info
 
 
 def _merge_environment(environments, name, values, visited):
     environment = environments.get(name)
     if environment is None:
-        raise ValueError('unknown environment {0!r:.100}'.format(name))
+        raise ValueError(f'unknown environment {name!r:.100}')
     environment_parents = environment.get('parents')
     if environment_parents is not None:
         for environment_parent in environment_parents:
             if environment_parent in visited:
-                raise ValueError('circular inheritance with environment {0!r:.100s}'.format(environment_parent))
+                raise ValueError(f'circular inheritance with environment {environment_parent!r:.100s}')
             visited.add(environment_parent)
             values = _merge_environment(environments, environment_parent, values, visited)
             visited.remove(environment_parent)
