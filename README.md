@@ -1,9 +1,9 @@
 # template-specialize
 
-![PyPI - Status](https://img.shields.io/pypi/status/template-specialize)
-![PyPI](https://img.shields.io/pypi/v/template-specialize)
-![GitHub](https://img.shields.io/github/license/craigahobbs/template-specialize)
-![PyPI - Python Version](https://img.shields.io/pypi/pyversions/template-specialize)
+[![PyPI - Status](https://img.shields.io/pypi/status/template-specialize)](https://pypi.org/project/template-specialize/)
+[![PyPI](https://img.shields.io/pypi/v/template-specialize)](https://pypi.org/project/template-specialize/)
+[![GitHub](https://img.shields.io/github/license/craigahobbs/template-specialize)](https://github.com/craigahobbs/template-specialize/blob/main/LICENSE)
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/template-specialize)](https://pypi.org/project/template-specialize/)
 
 **template-specialize** is a command-line tool for rendering
 [Jinja2](https://jinja.palletsprojects.com/en/3.0.x/templates/)
@@ -41,12 +41,6 @@ You can also render templates contained within one or more directories to an out
 ```
 $ template-specialize templates/ output/ --key var --value value
 ```
-
-
-## Links
-
-- [Package on pypi](https://pypi.org/project/template-specialize/)
-- [Source code on GitHub](https://github.com/craigahobbs/template-specialize)
 
 
 ## Environment Files
