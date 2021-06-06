@@ -5,8 +5,41 @@
 ![GitHub](https://img.shields.io/github/license/craigahobbs/template-specialize)
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/template-specialize)
 
-template-specialize is a recursive [Jinja2](https://pypi.org/project/Jinja2/) template
-renderer (specializer).
+**template-specialize** is a command-line tool for rendering
+[Jinja2](https://pypi.org/project/Jinja2/)
+templates. It renders individual template files as well as directories of template files.
+
+For example, consider this [Markdown](https://guides.github.com/features/mastering-markdown/) name
+tag template, "nametag.md":
+
+``` jinja2
+## Hello, my name is
+
+# {{name}}
+{% if title is defined %}
+### {{title}}
+{% endif %}
+```
+
+Use template-specialize to render the template. By default, templates are rendered to the terminal:
+
+```
+$ template-specialize ~/tmp/nametag.md --key name --value 'John Doe'
+## Hello, my name is
+
+# John Doe
+```
+
+You can render the template any number of times:
+
+```
+$ template-specialize ~/tmp/nametag.md --key name --value 'Roy Hobbs' --key title --value 'The best there ever was'
+## Hello, my name is
+
+# Roy Hobbs
+
+### The best there ever was
+```
 
 
 ## Links
@@ -18,7 +51,9 @@ renderer (specializer).
 ## Usage
 
 ```
-usage: template-specialize [-h] [-c FILE] [-e ENV] [--key KEY] [--value VALUE] [--dump] [-v] [SRC] [DST]
+usage: template-specialize [-h] [-c FILE] [-e ENV] [--key KEY] [--value VALUE]
+                           [--dump] [-v]
+                           [SRC] [DST]
 
 positional arguments:
   SRC            the source template file or directory
