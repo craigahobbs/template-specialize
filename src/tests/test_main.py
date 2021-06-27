@@ -226,7 +226,8 @@ a.c = {{a.c}}
                     '''\
 a.a = foo
 a.b = bar
-a.c = [4, 5, 3]'''
+a.c = [4, 5, 3]
+'''
                 )
 
     def test_keys_only(self):
@@ -262,7 +263,8 @@ a.c = {{a.c}}
                     '''\
 a.a = foo
 a.b = bar
-a.c = [3]'''
+a.c = [3]
+'''
                 )
 
     def test_environment_and_keys(self):
@@ -315,7 +317,8 @@ a.c = {{a.c}}
                     '''\
 a.a = foo
 a.b = bonk
-a.c = [12, 11]'''
+a.c = [12, 11]
+'''
                 )
 
     def test_dump(self):
@@ -457,7 +460,7 @@ unknown environment 'unknown'
 
             self.assertEqual(cm_exc.exception.code, 2)
             self.assertEqual(stdout.getvalue(), '')
-            self.assertEqual(stderr.getvalue(), f"[Errno 21] Is a directory: '{output_path}'\n")
+            self.assertEqual(stderr.getvalue(), f"{input_path}: error: [Errno 21] Is a directory: '{output_path}'\n")
             self.assertTrue(os.path.isfile(input_path))
             self.assertTrue(os.path.isdir(output_path))
 
@@ -494,7 +497,10 @@ unknown environment 'unknown'
 
             self.assertEqual(cm_exc.exception.code, 2)
             self.assertEqual(stdout.getvalue(), '')
-            self.assertEqual(stderr.getvalue(), f"[Errno 17] File exists: '{output_path}'\n")
+            self.assertEqual(
+                stderr.getvalue(),
+                f"{os.path.join(input_path, 'template.txt')}: error: [Errno 17] File exists: '{output_path}'\n"
+            )
             self.assertTrue(os.path.isdir(input_path))
             self.assertTrue(os.path.isfile(output_path))
 
@@ -510,9 +516,242 @@ unknown environment 'unknown'
 
             self.assertEqual(cm_exc.exception.code, 2)
             self.assertEqual(stdout.getvalue(), '')
-            self.assertEqual(stderr.getvalue(), f"[Errno 2] No such file or directory: '{input_path}'\n")
+            self.assertEqual(stderr.getvalue(), f"{input_path}: error: [Errno 2] No such file or directory: '{input_path}'\n")
             self.assertFalse(os.path.exists(input_path))
             self.assertFalse(os.path.exists(output_path))
+
+    def test_rename(self):
+        test_files = [
+            (
+                'template.txt',
+                '''\
+{# Delete template.txt #}
+{% template_specialize_rename "template.txt" %}
+
+{# Rename the file and the sub-directory #}
+{% template_specialize_rename "subdir/subtemplate.txt", "newtemplate.txt" %}
+{% template_specialize_rename "subdir", "newdir" %}
+'''
+            ),
+            (('subdir', 'subtemplate.txt'), 'agree, "{{foo}}" is the value of "foo"')
+        ]
+        with create_test_files(test_files) as input_dir, \
+             create_test_files([]) as output_dir:
+            with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
+                 unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
+                main([input_dir, output_dir, '--key', 'foo', '--value', 'bar'])
+
+            self.assertEqual(stdout.getvalue(), '')
+            self.assertEqual(stderr.getvalue(), '')
+            self.assertFalse(os.path.exists(os.path.join(output_dir, 'template.txt')))
+            self.assertFalse(os.path.exists(os.path.join(output_dir, 'subdir')))
+            with open(os.path.join(output_dir, 'newdir', 'newtemplate.txt'), 'r', encoding='utf-8') as f_output:
+                self.assertEqual(f_output.read(), 'agree, "bar" is the value of "foo"')
+
+    def test_delete_directory(self):
+        test_files = [
+            (
+                'template.txt',
+                '''\
+{# Delete template.txt #}
+{% template_specialize_rename "template.txt" %}
+
+{# Delete the sub-directory #}
+{% template_specialize_rename "subdir" %}
+'''
+            ),
+            (('subdir', 'subtemplate.txt'), 'agree, "{{foo}}" is the value of "foo"')
+        ]
+        with create_test_files(test_files) as input_dir, \
+             create_test_files([]) as output_dir:
+            with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
+                 unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
+                main([input_dir, output_dir, '--key', 'foo', '--value', 'bar'])
+
+            self.assertEqual(stdout.getvalue(), '')
+            self.assertEqual(stderr.getvalue(), '')
+            self.assertFalse(os.path.exists(os.path.join(output_dir, 'template.txt')))
+            self.assertFalse(os.path.exists(os.path.join(output_dir, 'subdir')))
+
+    def test_rename_error_not_found(self):
+        test_files = [
+            (
+                'template.txt',
+                '''\
+{% template_specialize_rename 'missing.txt', 'bar.txt' %}
+'''
+            )
+        ]
+        with create_test_files(test_files) as input_dir, \
+             create_test_files([]) as output_dir:
+            output_missing = os.path.join(output_dir, 'missing.txt')
+            output_bar = os.path.join(output_dir, 'bar.txt')
+            with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
+                 unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
+                with self.assertRaises(SystemExit):
+                    main([input_dir, output_dir])
+
+            self.assertEqual(stdout.getvalue(), '')
+            self.assertEqual(
+                stderr.getvalue(),
+                f"template_specialize_rename error: [Errno 2] No such file or directory: '{output_missing}' -> '{output_bar}'"
+            )
+
+    def test_rename_error_no_args(self):
+        test_files = [
+            (
+                'template.txt',
+                '''\
+{% template_specialize_rename %}
+'''
+            )
+        ]
+        with create_test_files(test_files) as input_dir, \
+             create_test_files([]) as output_dir:
+            with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
+                 unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
+                with self.assertRaises(SystemExit):
+                    main([input_dir, output_dir])
+
+            self.assertEqual(stdout.getvalue(), '')
+            self.assertEqual(stderr.getvalue(), f"{os.path.join(input_dir, 'template.txt')}: error: unexpected 'end of statement block'\n")
+
+    def test_rename_error_extra_args(self):
+        test_files = [
+            (
+                'template.txt',
+                '''\
+{% template_specialize_rename 'template.txt', 'bar.txt, 'extra' %}
+'''
+            )
+        ]
+        with create_test_files(test_files) as input_dir, \
+             create_test_files([]) as output_dir:
+            with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
+                 unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
+                with self.assertRaises(SystemExit):
+                    main([input_dir, output_dir])
+
+            self.assertEqual(stdout.getvalue(), '')
+            self.assertEqual(
+                stderr.getvalue(),
+                f"{os.path.join(input_dir, 'template.txt')}: error: expected token 'end of statement block', got 'extra'\n"
+            )
+
+    def test_rename_error_path_non_str(self):
+        test_files = [
+            (
+                'template.txt',
+                '''\
+{% template_specialize_rename 7, 'foo.txt' %}
+'''
+            )
+        ]
+        with create_test_files(test_files) as input_dir, \
+             create_test_files([]) as output_dir:
+            with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
+                 unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
+                with self.assertRaises(SystemExit):
+                    main([input_dir, output_dir])
+
+            self.assertEqual(stdout.getvalue(), '')
+            self.assertEqual(stderr.getvalue(), f"{os.path.join(input_dir, 'template.txt')}: error: invalid path 7\n")
+
+    def test_rename_error_path_empty(self):
+        test_files = [
+            (
+                'template.txt',
+                '''\
+{% template_specialize_rename '  ', 'foo.txt' %}
+'''
+            )
+        ]
+        with create_test_files(test_files) as input_dir, \
+             create_test_files([]) as output_dir:
+            with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
+                 unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
+                with self.assertRaises(SystemExit):
+                    main([input_dir, output_dir])
+
+            self.assertEqual(stdout.getvalue(), '')
+            self.assertEqual(stderr.getvalue(), f"{os.path.join(input_dir, 'template.txt')}: error: invalid path '  '\n")
+
+    def test_rename_error_path_invalid(self):
+        test_files = [
+            (
+                'template.txt',
+                '''\
+{% template_specialize_rename '../bar.txt', 'foo.txt' %}
+'''
+            )
+        ]
+        with create_test_files(test_files) as input_dir, \
+             create_test_files([]) as output_dir:
+            with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
+                 unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
+                with self.assertRaises(SystemExit):
+                    main([input_dir, output_dir])
+
+            self.assertEqual(stdout.getvalue(), '')
+            self.assertEqual(stderr.getvalue(), '''\
+template_specialize_rename invalid path '../bar.txt\'''')
+
+    def test_rename_error_name_non_str(self):
+        test_files = [
+            (
+                'template.txt',
+                '''\
+{% template_specialize_rename "template.txt", 7 %}
+'''
+            )
+        ]
+        with create_test_files(test_files) as input_dir, \
+             create_test_files([]) as output_dir:
+            with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
+                 unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
+                with self.assertRaises(SystemExit):
+                    main([input_dir, output_dir])
+
+            self.assertEqual(stdout.getvalue(), '')
+            self.assertEqual(stderr.getvalue(), f"{os.path.join(input_dir, 'template.txt')}: error: invalid name 7\n")
+
+    def test_rename_error_name_empty(self):
+        test_files = [
+            (
+                'template.txt',
+                '''\
+{% template_specialize_rename "template.txt", '  ' %}
+'''
+            )
+        ]
+        with create_test_files(test_files) as input_dir, \
+             create_test_files([]) as output_dir:
+            with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
+                 unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
+                with self.assertRaises(SystemExit):
+                    main([input_dir, output_dir])
+
+            self.assertEqual(stdout.getvalue(), '')
+            self.assertEqual(stderr.getvalue(), f"{os.path.join(input_dir, 'template.txt')}: error: invalid name '  '\n")
+
+    def test_rename_error_name_dirname(self):
+        test_files = [
+            (
+                'template.txt',
+                '''\
+{% template_specialize_rename "template.txt", '  /foo.txt' %}
+'''
+            )
+        ]
+        with create_test_files(test_files) as input_dir, \
+             create_test_files([]) as output_dir:
+            with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
+                 unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
+                with self.assertRaises(SystemExit):
+                    main([input_dir, output_dir])
+
+            self.assertEqual(stdout.getvalue(), '')
+            self.assertEqual(stderr.getvalue(), f"{os.path.join(input_dir, 'template.txt')}: error: invalid name '  /foo.txt'\n")
 
     def test_aws_parameter_store(self):
         test_files = [
@@ -546,7 +785,8 @@ unknown environment 'unknown'
                 '''\
 "some/string-{value}"
 some/string-{value}
-a"[bar}-{value}'''
+a"[bar}-{value}
+'''
             )
             self.assertEqual(stderr.getvalue(), '')
 
@@ -581,9 +821,7 @@ a"[bar}-{value}'''
             self.assertEqual(stdout.getvalue(), '')
             self.assertEqual(
                 stderr.getvalue(),
-                '''\
-Failed to retrieve value "some/string" from parameter store with error: SomeError
-'''
+                f'{input_path}: error: Failed to retrieve value "some/string" from parameter store with error: SomeError\n'
             )
 
 

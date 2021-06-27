@@ -6,13 +6,11 @@ try:
     import botocore.exceptions
 except ImportError: # pragma: nocover
     pass
-from jinja2 import nodes, TemplateRuntimeError
+from jinja2 import nodes
 from jinja2.ext import Extension
 
 
 class ParameterStoreExtension(Extension):
-    __slots__ = ()
-
     tags = set(['aws_parameter_store'])
 
     def __init__(self, environment):
@@ -38,6 +36,6 @@ class ParameterStoreExtension(Extension):
                 self.environment.aws_parameter_store_values[name] = result['Parameter']['Value']
             except botocore.exceptions.ClientError as ex:
                 code = ex.response.get('Error', {}).get('Code')
-                raise TemplateRuntimeError(f'Failed to retrieve value "{name}" from parameter store with error: {code}') from None
+                raise ValueError(f'Failed to retrieve value "{name}" from parameter store with error: {code}') from None
 
         return self.environment.aws_parameter_store_values[name]

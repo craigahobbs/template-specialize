@@ -89,6 +89,66 @@ service_name: my-service
 ```
 
 
+## Renaming and Deleting Output Files
+
+When specializing a template directory, it is sometimes necessary to rename an output file or directory. For example,
+consider a Python project template with the following structure:
+
+```
+.
+|-- README.md
+|-- package-name.txt
+|-- setup.py
+`-- src
+    |-- __init__.py
+    |-- package_name
+    |   |-- __init__.py
+    |   `-- package_name.py
+    `-- tests
+        |-- __init__.py
+        `-- test_package_name.py
+```
+
+As part of the specialization, we'd like to rename the "package_name" directory, the "package_name.py" file, and the
+"test_package_name.py" file to the specialized package name. To accomplish this, we add the "package-name.txt' utility
+file and call the "template_specialize_rename" Jinja2 extension:
+
+``` jinja2
+{# Rename template files #}
+{% template_specialize_rename 'src/tests/test_package_name.py', 'test_' + package_name + '.py' %}
+{% template_specialize_rename 'src/package_name/package_name.py', package_name + '.py' %}
+{% template_specialize_rename 'src/package_name', package_name %}
+
+{# Delete the package-name.txt utility template file #}
+{% template_specialize_rename 'package-name.txt' %}
+```
+
+First, the "template_specialize_rename" extension is used to rename the package output files and directories. Finally,
+since we don't want the empty utility file in the output, we delete it using the "template_specialize_rename" extension
+with no second argument. Here's an example usage of our Python project template:
+
+```
+$ template-specialize python-package my-package --key package_name --value my_package
+```
+
+This command produces the following specialized template output with appropriately named package source directory and
+source files:
+
+```
+.
+|-- README.md
+|-- setup.py
+`-- src
+    |-- __init__.py
+    |-- my_package
+    |   |-- __init__.py
+    |   `-- my_package.py
+    `-- tests
+        |-- __init__.py
+        `-- test_my_package.py
+```
+
+
 ## AWS Parameter Store
 
 template-specialize can retrieve template values from

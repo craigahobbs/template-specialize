@@ -5,7 +5,7 @@ import unittest
 import unittest.mock as unittest_mock
 
 import botocore.exceptions
-from jinja2 import Environment, StrictUndefined, TemplateRuntimeError
+from jinja2 import Environment, StrictUndefined
 from template_specialize.aws_parameter_store import ParameterStoreExtension
 
 
@@ -64,14 +64,12 @@ again, val1 = val1-{value}'''
         template = environment.from_string(
             '''\
 val1 = {% aws_parameter_store 'val1' %}
-val2 = {% aws_parameter_store 'val2' %}
-again, val1 = {% aws_parameter_store val %}
 '''
         )
         with unittest_mock.patch('botocore.session') as mock_session:
             mock_session.get_session.return_value.create_client.return_value.get_parameter.side_effect = \
                 botocore.exceptions.ClientError({'Error': {'Code': 'SomeError'}}, 'GetParameter')
-            with self.assertRaises(TemplateRuntimeError) as cm_exc:
+            with self.assertRaises(ValueError) as cm_exc:
                 template.render({'val1': 'val1-str', 'val2': 7})
             self.assertEqual(str(cm_exc.exception), 'Failed to retrieve value "val1" from parameter store with error: SomeError')
 

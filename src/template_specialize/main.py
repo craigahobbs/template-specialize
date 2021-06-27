@@ -4,10 +4,12 @@
 import argparse
 from itertools import chain
 import os
+import shutil
 import sys
 import warnings
 
-from jinja2 import Environment, StrictUndefined
+from jinja2 import Environment, StrictUndefined, nodes
+from jinja2.ext import Extension
 import yaml
 
 from . import __version__ as VERSION
@@ -48,7 +50,7 @@ def main(argv=None):
                 with open(environment_file, 'r', encoding='utf-8') as f_environment:
                     _parse_environments(f_environment, environments)
             except Exception as exc: # pylint: disable=broad-except
-                parser.exit(message=str(exc) + '\n', status=2)
+                parser.exit(message=f'{exc}\n', status=2)
 
     # Build the template variables dict
     template_variables = {}
@@ -60,7 +62,7 @@ def main(argv=None):
             for key, value in zip(args.keys, args.values):
                 _merge_values({key: yaml.full_load(value)}, template_variables)
     except Exception as exc: # pylint: disable=broad-except
-        parser.exit(message=str(exc) + '\n', status=2)
+        parser.exit(message=f'{exc}\n', status=2)
 
     # Dump the template variables, if necessary
     if args.dump:
@@ -84,10 +86,15 @@ def main(argv=None):
     else:
         dst_files = [args.dst_path]
 
+    # Rename extension is only available for directory destination paths
+    extensions = [ParameterStoreExtension]
+    if is_dir:
+        extensions.append(TemplateSpecializeRenameExtension)
+
     # Process the template files
-    environment = Environment(extensions=[ParameterStoreExtension], undefined=StrictUndefined)
-    try:
-        for src_file, dst_file in zip(src_files, dst_files):
+    environment = Environment(extensions=extensions, undefined=StrictUndefined, keep_trailing_newline=True)
+    for src_file, dst_file in zip(src_files, dst_files):
+        try:
             if is_dir:
                 os.makedirs(os.path.dirname(dst_file), exist_ok=True)
             if isinstance(src_file, str):
@@ -98,12 +105,62 @@ def main(argv=None):
                 dst_encoding = None
                 if isinstance(dst_file, str):
                     dst_encoding = 'utf-8'
-                environment.from_string(f_src.read()).stream(**template_variables).dump(dst_file, encoding=dst_encoding)
+                template = environment.from_string(f_src.read())
+                template.stream(**template_variables).dump(dst_file, encoding=dst_encoding)
             finally:
                 if f_src is not src_file:
                     f_src.close()
-    except Exception as exc: # pylint: disable=broad-except
-        parser.exit(message=str(exc) + '\n', status=2)
+        except Exception as exc: # pylint: disable=broad-except
+            parser.exit(message=f'{src_file}: error: {exc}\n', status=2)
+
+    # Process any template destination path rename and delete operations
+    if is_dir:
+        dst_path_norm = os.path.join(os.path.normpath(args.dst_path), '')
+        for rename_path_rel, rename_name in environment.template_specialize_rename: # pylint: disable=no-member
+            rename_path = os.path.normpath(os.path.join(args.dst_path, rename_path_rel))
+
+            # Ensure the source path is contained by the destination template directory
+            if os.path.commonprefix((dst_path_norm, rename_path)) != dst_path_norm:
+                parser.exit(message=f'template_specialize_rename invalid path {rename_path_rel!r}', status=2)
+
+            # Delete or rename?
+            try:
+                if rename_name is None:
+                    if os.path.isdir(rename_path):
+                        shutil.rmtree(rename_path)
+                    else:
+                        os.unlink(rename_path)
+                else:
+                    os.rename(rename_path, os.path.join(os.path.dirname(rename_path), rename_name))
+            except Exception as exc: # pylint: disable=broad-except
+                parser.exit(message=f'template_specialize_rename error: {exc}', status=2)
+
+
+class TemplateSpecializeRenameExtension(Extension):
+    tags = set(['template_specialize_rename'])
+
+    def __init__(self, environment):
+        super().__init__(environment)
+        environment.extend(template_specialize_rename=[])
+
+    def parse(self, parser):
+        lineno = next(parser.stream).lineno
+        path = parser.parse_expression()
+        if parser.stream.skip_if('comma'):
+            name = parser.parse_expression()
+        else:
+            name = nodes.Const(None)
+        result = self.call_method('_rename', [path, name], lineno=lineno)
+        return nodes.Output([result], lineno=lineno)
+
+    def _rename(self, path, name):
+        if not (isinstance(path, str) and path.strip() != ''):
+            raise ValueError(f'invalid path {path!r}')
+        if name is not None and \
+           not (isinstance(name, str) and os.path.basename(name).strip() != '' and os.path.dirname(name) == ''):
+            raise ValueError(f'invalid name {name!r}')
+        self.environment.template_specialize_rename.append((path.strip(), name.strip() if name is not None else None))
+        return ''
 
 
 def _parse_environments(environment_yaml, environments):
