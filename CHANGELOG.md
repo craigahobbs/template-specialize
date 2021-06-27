@@ -1,3 +1,7 @@
+## 1.1.0 (2021-06-27)
+
+- [f59b9f7](https://github.com/craigahobbs/template-specialize/commit/f59b9f7) - add template_specialize_rename extension
+
 ## 1.0.1 (2021-06-06)
 
 - [5de2ae1](https://github.com/craigahobbs/template-specialize/commit/5de2ae1) - update readme
