@@ -50,7 +50,7 @@ class TestMain(unittest.TestCase):
              create_test_files([]) as output_dir:
             input_path = os.path.join(input_dir, 'template.txt')
             output_path = os.path.join(output_dir, 'other.txt')
-            argv = ['template-specialize', input_path, output_path, '--key', 'foo', '--value', 'bar']
+            argv = ['template-specialize', input_path, output_path, '--key', 'foo', 'bar']
             with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
                  unittest_mock.patch('sys.stderr', new=StringIO()) as stderr, \
                  unittest_mock.patch('sys.argv', argv):
@@ -75,25 +75,11 @@ class TestMain(unittest.TestCase):
             self.assertEqual(stdout.getvalue(), '')
             self.assertEqual(stderr.getvalue(), str(__version__) + '\n')
 
-    def test_mismatched_keys_values(self):
-        for argv in [
-                ['--key', 'a', 'src.txt', 'dst.txt'],
-                ['--key', 'a', '--value', 'foo', '--key', 'b', 'src.txt', 'dst.txt']
-        ]:
-            with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
-                 unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
-                with self.assertRaises(SystemExit) as cm_exc:
-                    main(argv)
-
-            self.assertEqual(cm_exc.exception.code, 2)
-            self.assertEqual(stdout.getvalue(), '')
-            self.assertTrue(stderr.getvalue().endswith('template-specialize: error: mismatched keys/values\n'))
-
     def test_invalid_keys_values(self):
         with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
              unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
             with self.assertRaises(SystemExit) as cm_exc:
-                main(['--key', 'a', '--value', 'a: b: c'])
+                main(['--key', 'a', 'a: b: c'])
 
         self.assertEqual(cm_exc.exception.code, 2)
         self.assertEqual(stdout.getvalue(), '')
@@ -154,7 +140,7 @@ b.a = {{b.a}}
                         '-c', test_path,
                         '-c', test2_path,
                         '-e', 'env3',
-                        '--key', 'b', '--value', '[b0]',
+                        '--key', 'b', '[b0]',
                         input_path,
                         output_path
                     ])
@@ -248,9 +234,9 @@ a.c = {{a.c}}
             with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
                  unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
                 main([
-                    '--key', 'a', '--value', '{a: foo}',
-                    '--key', 'a', '--value', '{b: bar}',
-                    '--key', 'a', '--value', '{c: [3]}',
+                    '--key', 'a', '{a: foo}',
+                    '--key', 'a', '{b: bar}',
+                    '--key', 'a', '{c: [3]}',
                     input_path,
                     output_path
                 ])
@@ -299,12 +285,9 @@ a.c = {{a.c}}
                 main([
                     '-c', config_path,
                     '-e', 'env',
-                    '--key', 'a',
-                    '--value', '{b: bonk}',
-                    '--key', 'a',
-                    '--value', '{c: [10]}',
-                    '--key', 'a',
-                    '--value', '{c: [12, 11]}',
+                    '--key', 'a', '{b: bonk}',
+                    '--key', 'a', '{c: [10]}',
+                    '--key', 'a', '{c: [12, 11]}',
                     input_path,
                     output_path
                 ])
@@ -343,10 +326,8 @@ env:
                     main([
                         '-c', config_path,
                         '-e', 'env',
-                        '--key', 'a',
-                        '--value', '{b: bonk}',
-                        '--key', 'a',
-                        '--value', '{c: [12, 11]}',
+                        '--key', 'a', '{b: bonk}',
+                        '--key', 'a', '{c: [12, 11]}',
                         '--dump'
                     ])
 
@@ -403,7 +384,7 @@ unknown environment 'unknown'
             output_path = os.path.join(output_dir, 'other.txt')
             with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
                  unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
-                main([input_path, output_path, '--key', 'foo', '--value', 'bar'])
+                main([input_path, output_path, '--key', 'foo', 'bar'])
 
             self.assertEqual(stdout.getvalue(), '')
             self.assertEqual(stderr.getvalue(), '')
@@ -418,7 +399,7 @@ unknown environment 'unknown'
             input_path = os.path.join(input_dir, 'template.txt')
             with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
                  unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
-                main([input_path, '--key', 'foo', '--value', 'bar'])
+                main([input_path, '--key', 'foo', 'bar'])
 
             self.assertEqual(stdout.getvalue(), 'the value of "foo" is "bar"')
             self.assertEqual(stderr.getvalue(), '')
@@ -427,7 +408,7 @@ unknown environment 'unknown'
         with unittest_mock.patch('sys.stdin', new=StringIO('the value of "foo" is "{{foo}}"')), \
              unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
              unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
-            main(['--key', 'foo', '--value', 'bar'])
+            main(['--key', 'foo', 'bar'])
 
         self.assertEqual(stdout.getvalue(), 'the value of "foo" is "bar"')
         self.assertEqual(stderr.getvalue(), '')
@@ -438,7 +419,7 @@ unknown environment 'unknown'
             with unittest_mock.patch('sys.stdin', new=StringIO('the value of "foo" is "{{foo}}"')), \
                  unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
                  unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
-                main(['-', output_path, '--key', 'foo', '--value', 'bar'])
+                main(['-', output_path, '--key', 'foo', 'bar'])
 
             self.assertEqual(stdout.getvalue(), '')
             self.assertEqual(stderr.getvalue(), '')
@@ -456,7 +437,7 @@ unknown environment 'unknown'
             with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
                  unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
                 with self.assertRaises(SystemExit) as cm_exc:
-                    main([input_path, output_path, '--key', 'foo', '--value', 'bar'])
+                    main([input_path, output_path, '--key', 'foo', 'bar'])
 
             self.assertEqual(cm_exc.exception.code, 2)
             self.assertEqual(stdout.getvalue(), '')
@@ -473,7 +454,7 @@ unknown environment 'unknown'
              create_test_files([]) as output_dir:
             with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
                  unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
-                main([input_dir, output_dir, '--key', 'foo', '--value', 'bar'])
+                main([input_dir, output_dir, '--key', 'foo', 'bar'])
 
             self.assertEqual(stdout.getvalue(), '')
             self.assertEqual(stderr.getvalue(), '')
@@ -493,7 +474,7 @@ unknown environment 'unknown'
             with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
                  unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
                 with self.assertRaises(SystemExit) as cm_exc:
-                    main([input_path, output_path, '--key', 'foo', '--value', 'bar'])
+                    main([input_path, output_path, '--key', 'foo', 'bar'])
 
             self.assertEqual(cm_exc.exception.code, 2)
             self.assertEqual(stdout.getvalue(), '')
@@ -512,7 +493,7 @@ unknown environment 'unknown'
             with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
                  unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
                 with self.assertRaises(SystemExit) as cm_exc:
-                    main([input_path, output_path, '--key', 'foo', '--value', 'bar'])
+                    main([input_path, output_path, '--key', 'foo', 'bar'])
 
             self.assertEqual(cm_exc.exception.code, 2)
             self.assertEqual(stdout.getvalue(), '')
@@ -539,7 +520,7 @@ unknown environment 'unknown'
              create_test_files([]) as output_dir:
             with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
                  unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
-                main([input_dir, output_dir, '--key', 'foo', '--value', 'bar'])
+                main([input_dir, output_dir, '--key', 'foo', 'bar'])
 
             self.assertEqual(stdout.getvalue(), '')
             self.assertEqual(stderr.getvalue(), '')
@@ -566,7 +547,7 @@ unknown environment 'unknown'
              create_test_files([]) as output_dir:
             with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
                  unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
-                main([input_dir, output_dir, '--key', 'foo', '--value', 'bar'])
+                main([input_dir, output_dir, '--key', 'foo', 'bar'])
 
             self.assertEqual(stdout.getvalue(), '')
             self.assertEqual(stderr.getvalue(), '')
@@ -778,7 +759,7 @@ template_specialize_rename invalid path '../bar.txt\'''')
                  unittest_mock.patch('sys.stderr', new=StringIO()) as stderr, \
                  unittest_mock.patch('botocore.session') as mock_session:
                 mock_session.get_session.return_value.create_client.return_value.get_parameter.side_effect = get_parameter
-                main([input_path, '--key', 'foo', '--value', 'a"[bar}'])
+                main([input_path, '--key', 'foo', 'a"[bar}'])
 
             self.assertEqual(
                 stdout.getvalue(),

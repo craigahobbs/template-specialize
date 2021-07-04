@@ -24,7 +24,7 @@ To render the template file, execute template-specialize as follows. By default,
 rendered to the terminal:
 
 ```
-$ template-specialize nametag.md --key name --value 'John Doe'
+$ template-specialize nametag.md --key name 'John Doe'
 ## Hello, my name is
 
 # John Doe
@@ -33,13 +33,13 @@ $ template-specialize nametag.md --key name --value 'John Doe'
 You can render the template file to an output file:
 
 ```
-$ template-specialize nametag.md nametag-roy.md --key name --value 'Roy Hobbs' --key title --value 'The best there ever was'
+$ template-specialize nametag.md nametag-roy.md --key name 'Roy Hobbs' --key title 'The best there ever was'
 ```
 
 You can also render templates contained within one or more directories to an output directory:
 
 ```
-$ template-specialize templates/ output/ --key var --value value
+$ template-specialize templates/ output/ --key var value
 ```
 
 
@@ -128,7 +128,7 @@ since we don't want the empty utility file in the output, we delete it using the
 with no second argument. Here's an example usage of our Python project template:
 
 ```
-$ template-specialize python-package my-package --key package_name --value my_package
+$ template-specialize python-package my-package --key package_name my_package
 ```
 
 This command produces the following specialized template output with appropriately named package source directory and
@@ -169,22 +169,22 @@ botocore is usually configured using
 ## Usage
 
 ```
-usage: template-specialize [-h] [-c FILE] [-e ENV] [--key KEY] [--value VALUE]
-                           [--dump] [-v]
+usage: template-specialize [-h] [-c FILE] [-e ENV] [-k KEY VALUE] [--dump]
+                           [-v]
                            [SRC] [DST]
 
 positional arguments:
-  SRC            the source template file or directory
-  DST            the destination file or directory
+  SRC                   the source template file or directory
+  DST                   the destination file or directory
 
 options:
-  -h, --help     show this help message and exit
-  -c FILE        the environment files
-  -e ENV         the environment name
-  --key KEY      add a template key. Must be paired with a template value.
-  --value VALUE  add a template value. Must be paired with a template key.
-  --dump         dump the template variables
-  -v, --version  show version number and quit
+  -h, --help            show this help message and exit
+  -c FILE               the environment files
+  -e ENV                the environment name
+  -k KEY VALUE, --key KEY VALUE
+                        add a template key and value
+  --dump                dump the template variables
+  -v, --version         show version number and quit
 ```
 
 

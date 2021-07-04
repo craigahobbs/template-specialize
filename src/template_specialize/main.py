@@ -28,10 +28,8 @@ def main(argv=None):
                         help='the environment files')
     parser.add_argument('-e', dest='environment', metavar='ENV',
                         help='the environment name')
-    parser.add_argument('--key', action='append', dest='keys', metavar='KEY', default=[],
-                        help='add a template key. Must be paired with a template value.')
-    parser.add_argument('--value', action='append', dest='values', metavar='VALUE', default=[],
-                        help='add a template value. Must be paired with a template key.')
+    parser.add_argument('-k', '--key', action='append', nargs=2, dest='keys', metavar=('KEY', 'VALUE'), default=[],
+                        help='add a template key and value')
     parser.add_argument('--dump', action='store_true',
                         help='dump the template variables')
     parser.add_argument('-v', '--version', action='store_true',
@@ -39,8 +37,6 @@ def main(argv=None):
     args = parser.parse_args(args=argv)
     if args.version:
         parser.exit(message=VERSION + '\n')
-    if len(args.keys) != len(args.values):
-        parser.error('mismatched keys/values')
 
     # Parse the environment files
     environments = {}
@@ -59,7 +55,7 @@ def main(argv=None):
             _merge_environment(environments, args.environment, template_variables, set())
         with warnings.catch_warnings():
             warnings.simplefilter('ignore', DeprecationWarning)
-            for key, value in zip(args.keys, args.values):
+            for key, value in args.keys:
                 _merge_values({key: yaml.full_load(value)}, template_variables)
     except Exception as exc: # pylint: disable=broad-except
         parser.exit(message=f'{exc}\n', status=2)
