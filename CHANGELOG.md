@@ -1,3 +1,7 @@
+## 1.2.0 (2021-07-04)
+
+- [2c258ca](https://github.com/craigahobbs/template-specialize/commit/2c258ca) - simplify command line key/value arguments
+
 ## 1.1.0 (2021-06-27)
 
 - [f59b9f7](https://github.com/craigahobbs/template-specialize/commit/f59b9f7) - add template_specialize_rename extension
