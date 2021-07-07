@@ -119,7 +119,7 @@ def main(argv=None):
             if os.path.commonprefix((dst_path_norm, rename_path)) != dst_path_norm:
                 parser.exit(message=f'template_specialize_rename invalid path {rename_path_rel!r}', status=2)
 
-            # Delete or rename?
+            # Delete?
             try:
                 if rename_name is None:
                     if os.path.isdir(rename_path):
@@ -127,7 +127,13 @@ def main(argv=None):
                     else:
                         os.unlink(rename_path)
                 else:
-                    os.rename(rename_path, os.path.join(os.path.dirname(rename_path), rename_name))
+                    # If destination is a directory, delete it first
+                    rename_dst_path = os.path.join(os.path.dirname(rename_path), rename_name)
+                    if os.path.isdir(rename_dst_path):
+                        shutil.rmtree(rename_dst_path)
+
+                    # Rename...
+                    os.rename(rename_path, rename_dst_path)
             except Exception as exc: # pylint: disable=broad-except
                 parser.exit(message=f'template_specialize_rename error: {exc}', status=2)
 
