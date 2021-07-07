@@ -1,3 +1,7 @@
+## 1.2.1 (2021-07-07)
+
+- [c82cd64](https://github.com/craigahobbs/template-specialize/commit/c82cd64) - delete template rename destination directory
+
 ## 1.2.0 (2021-07-04)
 
 - [2c258ca](https://github.com/craigahobbs/template-specialize/commit/2c258ca) - simplify command line key/value arguments
