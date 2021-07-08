@@ -1,3 +1,7 @@
+## 1.2.2 (2021-07-08)
+
+- [5b4fc91](https://github.com/craigahobbs/template-specialize/commit/5b4fc91) - improve template_specialize_rename error messages
+
 ## 1.2.1 (2021-07-07)
 
 - [c82cd64](https://github.com/craigahobbs/template-specialize/commit/c82cd64) - delete template rename destination directory
