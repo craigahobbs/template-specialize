@@ -668,7 +668,10 @@ unknown environment 'unknown'
                     main([input_dir, output_dir])
 
             self.assertEqual(stdout.getvalue(), '')
-            self.assertEqual(stderr.getvalue(), f"{os.path.join(input_dir, 'template.txt')}: error: invalid path 7\n")
+            self.assertEqual(
+                stderr.getvalue(),
+                f"{os.path.join(input_dir, 'template.txt')}: error: template_specialize_rename - invalid source path 7\n"
+            )
 
     def test_rename_error_path_empty(self):
         test_files = [
@@ -687,7 +690,10 @@ unknown environment 'unknown'
                     main([input_dir, output_dir])
 
             self.assertEqual(stdout.getvalue(), '')
-            self.assertEqual(stderr.getvalue(), f"{os.path.join(input_dir, 'template.txt')}: error: invalid path '  '\n")
+            self.assertEqual(
+                stderr.getvalue(),
+                f"{os.path.join(input_dir, 'template.txt')}: error: template_specialize_rename - invalid source path '  '\n"
+            )
 
     def test_rename_error_path_invalid(self):
         test_files = [
@@ -726,7 +732,10 @@ template_specialize_rename invalid path '../bar.txt\'''')
                     main([input_dir, output_dir])
 
             self.assertEqual(stdout.getvalue(), '')
-            self.assertEqual(stderr.getvalue(), f"{os.path.join(input_dir, 'template.txt')}: error: invalid name 7\n")
+            self.assertEqual(
+                stderr.getvalue(),
+                f"{os.path.join(input_dir, 'template.txt')}: error: template_specialize_rename - invalid destination name 7\n"
+            )
 
     def test_rename_error_name_empty(self):
         test_files = [
@@ -745,7 +754,10 @@ template_specialize_rename invalid path '../bar.txt\'''')
                     main([input_dir, output_dir])
 
             self.assertEqual(stdout.getvalue(), '')
-            self.assertEqual(stderr.getvalue(), f"{os.path.join(input_dir, 'template.txt')}: error: invalid name '  '\n")
+            self.assertEqual(
+                stderr.getvalue(),
+                f"{os.path.join(input_dir, 'template.txt')}: error: template_specialize_rename - invalid destination name '  '\n"
+            )
 
     def test_rename_error_name_dirname(self):
         test_files = [
@@ -764,7 +776,54 @@ template_specialize_rename invalid path '../bar.txt\'''')
                     main([input_dir, output_dir])
 
             self.assertEqual(stdout.getvalue(), '')
-            self.assertEqual(stderr.getvalue(), f"{os.path.join(input_dir, 'template.txt')}: error: invalid name '  /foo.txt'\n")
+            self.assertEqual(
+                stderr.getvalue(),
+                f"{os.path.join(input_dir, 'template.txt')}: error: template_specialize_rename - invalid destination name '  /foo.txt'\n"
+            )
+
+    def test_rename_error_src_undefined(self):
+        test_files = [
+            (
+                'template.txt',
+                '''\
+{% template_specialize_rename foobar, "template.txt" %}
+'''
+            )
+        ]
+        with create_test_files(test_files) as input_dir, \
+             create_test_files([]) as output_dir:
+            with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
+                 unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
+                with self.assertRaises(SystemExit):
+                    main([input_dir, output_dir])
+
+            self.assertEqual(stdout.getvalue(), '')
+            self.assertEqual(
+                stderr.getvalue(),
+                f"{os.path.join(input_dir, 'template.txt')}: error: template_specialize_rename - invalid source path Undefined\n"
+            )
+
+    def test_rename_error_dst_undefined(self):
+        test_files = [
+            (
+                'template.txt',
+                '''\
+{% template_specialize_rename "template.txt", foobar %}
+'''
+            )
+        ]
+        with create_test_files(test_files) as input_dir, \
+             create_test_files([]) as output_dir:
+            with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
+                 unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
+                with self.assertRaises(SystemExit):
+                    main([input_dir, output_dir])
+
+            self.assertEqual(stdout.getvalue(), '')
+            self.assertEqual(
+                stderr.getvalue(),
+                f"{os.path.join(input_dir, 'template.txt')}: error: template_specialize_rename - invalid destination name Undefined\n"
+            )
 
     def test_aws_parameter_store(self):
         test_files = [

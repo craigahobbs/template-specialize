@@ -157,10 +157,10 @@ class TemplateSpecializeRenameExtension(Extension):
 
     def _rename(self, path, name):
         if not (isinstance(path, str) and path.strip() != ''):
-            raise ValueError(f'invalid path {path!r}')
+            raise ValueError(f'template_specialize_rename - invalid source path {path!r}')
         if name is not None and \
            not (isinstance(name, str) and os.path.basename(name).strip() != '' and os.path.dirname(name) == ''):
-            raise ValueError(f'invalid name {name!r}')
+            raise ValueError(f'template_specialize_rename - invalid destination name {name!r}')
         self.environment.template_specialize_rename.append((path.strip(), name.strip() if name is not None else None))
         return ''
 
