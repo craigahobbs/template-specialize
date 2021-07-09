@@ -21,7 +21,7 @@ def main():
     # Do the setup
     setup(
         name=PACKAGE_NAME,
-        description='Recursive template file specializer.',
+        description='Command-line tool for rendering Jinja2 templates',
         long_description=long_description,
         long_description_content_type='text/markdown',
         version=version,
