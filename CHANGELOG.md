@@ -1,3 +1,7 @@
+## 1.2.3 (2021-07-08)
+
+- [d05ef16](https://github.com/craigahobbs/template-specialize/commit/d05ef16) - update package description
+
 ## 1.2.2 (2021-07-08)
 
 - [5b4fc91](https://github.com/craigahobbs/template-specialize/commit/5b4fc91) - improve template_specialize_rename error messages
