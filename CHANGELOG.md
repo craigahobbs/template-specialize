@@ -1,3 +1,7 @@
+## 1.2.4 (2021-07-22)
+
+- [f7e404f](https://github.com/craigahobbs/template-specialize/commit/f7e404f) - remove version argument
+
 ## 1.2.3 (2021-07-08)
 
 - [d05ef16](https://github.com/craigahobbs/template-specialize/commit/d05ef16) - update package description
