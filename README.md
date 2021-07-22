@@ -170,7 +170,6 @@ botocore is usually configured using
 
 ```
 usage: template-specialize [-h] [-c FILE] [-e ENV] [-k KEY VALUE] [--dump]
-                           [-v]
                            [SRC] [DST]
 
 positional arguments:
@@ -184,7 +183,6 @@ options:
   -k KEY VALUE, --key KEY VALUE
                         add a template key and value
   --dump                dump the template variables
-  -v, --version         show version number and quit
 ```
 
 
