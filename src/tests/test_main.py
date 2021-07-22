@@ -11,7 +11,6 @@ import unittest
 import unittest.mock as unittest_mock
 
 import botocore.exceptions
-from template_specialize import __version__
 import template_specialize.__main__
 from template_specialize.main import main, _parse_environments, _merge_environment, _merge_values
 
@@ -60,20 +59,6 @@ class TestMain(unittest.TestCase):
             self.assertEqual(stderr.getvalue(), '')
             with open(os.path.join(output_dir, 'other.txt'), 'r', encoding='utf-8') as f_output:
                 self.assertEqual(f_output.read(), 'the value of "foo" is "bar"')
-
-    def test_version(self):
-        for argv in [
-                ['-v'],
-                ['--version']
-        ]:
-            with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
-                 unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
-                with self.assertRaises(SystemExit) as cm_exc:
-                    main(argv)
-
-            self.assertEqual(cm_exc.exception.code, 0)
-            self.assertEqual(stdout.getvalue(), '')
-            self.assertEqual(stderr.getvalue(), str(__version__) + '\n')
 
     def test_invalid_keys_values(self):
         with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \

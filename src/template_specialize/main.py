@@ -12,7 +12,6 @@ from jinja2 import Environment, StrictUndefined, nodes
 from jinja2.ext import Extension
 import yaml
 
-from . import __version__ as VERSION
 from .aws_parameter_store import ParameterStoreExtension
 
 
@@ -32,11 +31,7 @@ def main(argv=None):
                         help='add a template key and value')
     parser.add_argument('--dump', action='store_true',
                         help='dump the template variables')
-    parser.add_argument('-v', '--version', action='store_true',
-                        help='show version number and quit')
     args = parser.parse_args(args=argv)
-    if args.version:
-        parser.exit(message=VERSION + '\n')
 
     # Parse the environment files
     environments = {}

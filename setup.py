@@ -1,7 +1,6 @@
 # Licensed under the MIT License
 # https://github.com/craigahobbs/template-specialize/blob/main/LICENSE
 
-import re
 import os
 
 from setuptools import setup
@@ -10,10 +9,6 @@ MODULE_NAME = 'template_specialize'
 PACKAGE_NAME = 'template-specialize'
 
 def main():
-    # Read the package version
-    with open(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'src', MODULE_NAME, '__init__.py'), encoding='utf-8') as init_file:
-        version = re.search(r"__version__ = '(.+?)'", init_file.read()).group(1)
-
     # Read the readme for use as the long description
     with open(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'README.md'), encoding='utf-8') as readme_file:
         long_description = readme_file.read()
@@ -24,7 +19,7 @@ def main():
         description='Command-line tool for rendering Jinja2 templates',
         long_description=long_description,
         long_description_content_type='text/markdown',
-        version=version,
+        version='1.2.3',
         author='Craig Hobbs',
         author_email='craigahobbs@gmail.com',
         keywords='jinja2 template render specialize',
