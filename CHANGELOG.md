@@ -1,3 +1,7 @@
+## 1.3.0 (2021-08-09)
+
+- [a40cd74](https://github.com/craigahobbs/template-specialize/commit/a40cd74) - simplify template rendering and improve error messages
+
 ## 1.2.4 (2021-07-22)
 
 - [f7e404f](https://github.com/craigahobbs/template-specialize/commit/f7e404f) - remove version argument
