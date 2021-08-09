@@ -5,8 +5,6 @@ import os
 
 from setuptools import setup
 
-MODULE_NAME = 'template_specialize'
-PACKAGE_NAME = 'template-specialize'
 
 def main():
     # Read the readme for use as the long description
@@ -15,15 +13,15 @@ def main():
 
     # Do the setup
     setup(
-        name=PACKAGE_NAME,
+        name='template-specialize',
         description='Command-line tool for rendering Jinja2 templates',
         long_description=long_description,
         long_description_content_type='text/markdown',
-        version='1.2.4',
+        version='1.3.0',
         author='Craig Hobbs',
         author_email='craigahobbs@gmail.com',
         keywords='jinja2 template render specialize',
-        url='https://github.com/craigahobbs/' + PACKAGE_NAME,
+        url='https://github.com/craigahobbs/template-specialize',
         license='MIT',
         classifiers=[
             'Development Status :: 5 - Production/Stable',
@@ -38,17 +36,18 @@ def main():
             'Topic :: Utilities'
         ],
         package_dir={'': 'src'},
-        packages=[MODULE_NAME],
+        packages=['template_specialize'],
         install_requires=[
             'jinja2 >= 2.10',
             'pyyaml >= 5.1'
         ],
         entry_points={
             'console_scripts': [
-                PACKAGE_NAME + ' = ' + MODULE_NAME + '.main:main'
-            ],
+                'template-specialize = template_specialize.main:main'
+            ]
         }
     )
+
 
 if __name__ == '__main__':
     main()
