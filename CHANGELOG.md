@@ -1,3 +1,7 @@
+## 1.3.1 (2021-08-09)
+
+- [2be6a37](https://github.com/craigahobbs/template-specialize/commit/2be6a37) - fix readme examples
+
 ## 1.3.0 (2021-08-09)
 
 - [a40cd74](https://github.com/craigahobbs/template-specialize/commit/a40cd74) - simplify template rendering and improve error messages
