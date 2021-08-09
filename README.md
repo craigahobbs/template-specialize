@@ -28,7 +28,7 @@ $ template-specialize nametag.md nametag-roy.md -k name 'Roy Hobbs' -k title 'Th
 
 Afterward, the output file contains the rendered template:
 
-``` markdown
+```
 ## Hello, my name is
 
 # Roy Hobbs
