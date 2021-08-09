@@ -170,7 +170,7 @@ botocore is usually configured using
 
 ```
 usage: template-specialize [-h] [-c FILE] [-e ENV] [-k KEY VALUE] [--dump]
-                           [SRC] [DST]
+                           SRC DST
 
 positional arguments:
   SRC                   the source template file or directory

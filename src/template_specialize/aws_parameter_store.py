@@ -6,11 +6,11 @@ try:
     import botocore.exceptions
 except ImportError: # pragma: nocover
     pass
-from jinja2 import nodes
-from jinja2.ext import Extension
+import jinja2
+import jinja2.ext
 
 
-class ParameterStoreExtension(Extension):
+class ParameterStoreExtension(jinja2.ext.Extension):
     tags = set(['aws_parameter_store'])
 
     def __init__(self, environment):
@@ -21,7 +21,7 @@ class ParameterStoreExtension(Extension):
         lineno = next(parser.stream).lineno
         name = parser.parse_expression()
         parameter_value = self.call_method('_get_parameter', [name], lineno=lineno)
-        return nodes.Output([parameter_value], lineno=lineno)
+        return jinja2.nodes.Output([parameter_value], lineno=lineno)
 
     def _get_parameter(self, name):
         if name not in self.environment.aws_parameter_store_values:

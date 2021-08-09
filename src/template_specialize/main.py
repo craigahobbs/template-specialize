@@ -5,11 +5,10 @@ import argparse
 from itertools import chain
 import os
 import shutil
-import sys
 import warnings
 
-from jinja2 import Environment, StrictUndefined, nodes
-from jinja2.ext import Extension
+import jinja2
+import jinja2.ext
 import yaml
 
 from .aws_parameter_store import ParameterStoreExtension
@@ -19,9 +18,9 @@ def main(argv=None):
 
     # Command line parsing
     parser = argparse.ArgumentParser(prog='template-specialize')
-    parser.add_argument('src_path', metavar='SRC', nargs='?',
+    parser.add_argument('src_path', metavar='SRC',
                         help='the source template file or directory')
-    parser.add_argument('dst_path', metavar='DST', nargs='?',
+    parser.add_argument('dst_path', metavar='DST',
                         help='the destination file or directory')
     parser.add_argument('-c', dest='environment_files', metavar='FILE', action='append',
                         help='the environment files')
@@ -59,50 +58,53 @@ def main(argv=None):
     if args.dump:
         parser.exit(message=yaml.dump(template_variables, default_flow_style=False))
 
-    # Create the source template file paths
-    is_dir = False
-    if not args.src_path or args.src_path == '-':
-        src_files = [sys.stdin]
-    elif os.path.isdir(args.src_path):
-        is_dir = True
-        src_files = list(chain.from_iterable((os.path.join(root, file_) for file_ in files) for root, _, files in os.walk(args.src_path)))
-    else:
-        src_files = [args.src_path]
-
-    # Create the destination template file paths
+    # Get the source template file paths
+    is_dir = os.path.isdir(args.src_path)
     if is_dir:
-        dst_files = [os.path.join(args.dst_path, os.path.relpath(file_, args.src_path)) for file_ in src_files]
-    elif not args.dst_path or args.dst_path == '-':
-        dst_files = [sys.stdout]
+        src_dir = args.src_path
+        src_files = list(
+            os.path.relpath(src_file, src_dir) for src_file in
+            chain.from_iterable((os.path.join(root, file_) for file_ in files) for root, _, files in os.walk(args.src_path))
+        )
+    else:
+        src_dir = os.path.dirname(args.src_path)
+        src_files = [os.path.basename(args.src_path)]
+
+    # Get the destination template file paths
+    if is_dir:
+        dst_files = [os.path.join(args.dst_path, src_file) for src_file in src_files]
     else:
         dst_files = [args.dst_path]
 
-    # Rename extension is only available for directory destination paths
+    # Template extensions - rename extension is only available for directory destination paths
     extensions = [ParameterStoreExtension]
     if is_dir:
         extensions.append(TemplateSpecializeRenameExtension)
 
     # Process the template files
-    environment = Environment(extensions=extensions, undefined=StrictUndefined, keep_trailing_newline=True)
+    environment = jinja2.Environment(
+        loader=jinja2.FileSystemLoader(src_dir, encoding='utf-8'),
+        extensions=extensions,
+        undefined=jinja2.StrictUndefined,
+        keep_trailing_newline=True
+    )
     for src_file, dst_file in zip(src_files, dst_files):
         try:
+            # Load the template
+            template = environment.get_template(src_file)
+
+            # Ensure the destination directory exists (only for template directories)
             if is_dir:
                 os.makedirs(os.path.dirname(dst_file), exist_ok=True)
-            if isinstance(src_file, str):
-                f_src = open(src_file, 'r', encoding='utf-8') # pylint: disable=consider-using-with
-            else:
-                f_src = src_file
-            try:
-                dst_encoding = None
-                if isinstance(dst_file, str):
-                    dst_encoding = 'utf-8'
-                template = environment.from_string(f_src.read())
-                template.stream(**template_variables).dump(dst_file, encoding=dst_encoding)
-            finally:
-                if f_src is not src_file:
-                    f_src.close()
+
+            # Render the template
+            template.stream(**template_variables).dump(dst_file, encoding='utf-8')
+        except jinja2.TemplateNotFound:
+            parser.exit(message=f'{os.path.join(src_dir, src_file)}: template file or directory not found\n', status=2)
+        except jinja2.TemplateSyntaxError as exc:
+            parser.exit(message=f'{exc.filename}:{exc.lineno}: {exc.message}\n', status=2)
         except Exception as exc: # pylint: disable=broad-except
-            parser.exit(message=f'{src_file}: error: {exc}\n', status=2)
+            parser.exit(message=f'{os.path.join(src_dir, src_file)}: error: {exc}\n', status=2)
 
     # Process any template destination path rename and delete operations
     if is_dir:
@@ -133,7 +135,7 @@ def main(argv=None):
                 parser.exit(message=f'template_specialize_rename error: {exc}', status=2)
 
 
-class TemplateSpecializeRenameExtension(Extension):
+class TemplateSpecializeRenameExtension(jinja2.ext.Extension):
     tags = set(['template_specialize_rename'])
 
     def __init__(self, environment):
@@ -146,11 +148,15 @@ class TemplateSpecializeRenameExtension(Extension):
         if parser.stream.skip_if('comma'):
             name = parser.parse_expression()
         else:
-            name = nodes.Const(None)
+            name = jinja2.nodes.Const(None)
         result = self.call_method('_rename', [path, name], lineno=lineno)
-        return nodes.Output([result], lineno=lineno)
+        return jinja2.nodes.Output([result], lineno=lineno)
 
     def _rename(self, path, name):
+        if isinstance(path, jinja2.Undefined):
+            path._fail_with_undefined_error() # pylint: disable=protected-access
+        if isinstance(name, jinja2.Undefined):
+            name._fail_with_undefined_error() # pylint: disable=protected-access
         if not (isinstance(path, str) and path.strip() != ''):
             raise ValueError(f'template_specialize_rename - invalid source path {path!r}')
         if name is not None and \

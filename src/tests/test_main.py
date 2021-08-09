@@ -61,10 +61,14 @@ class TestMain(unittest.TestCase):
                 self.assertEqual(f_output.read(), 'the value of "foo" is "bar"')
 
     def test_invalid_keys_values(self):
-        with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
-             unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
-            with self.assertRaises(SystemExit) as cm_exc:
-                main(['--key', 'a', 'a: b: c'])
+        with create_test_files([]) as input_dir, \
+             create_test_files([]) as output_dir:
+            input_path = os.path.join(input_dir, 'template.txt')
+            output_path = os.path.join(output_dir, 'other.txt')
+            with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
+                 unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
+                with self.assertRaises(SystemExit) as cm_exc:
+                    main([input_path, output_path, '--key', 'a', 'a: b: c'])
 
         self.assertEqual(cm_exc.exception.code, 2)
         self.assertEqual(stdout.getvalue(), '')
@@ -228,7 +232,7 @@ a.c = {{a.c}}
 
             self.assertEqual(stdout.getvalue(), '')
             self.assertEqual(stderr.getvalue(), '')
-            with open(os.path.join(output_dir, 'other.txt'), 'r', encoding='utf-8') as f_output:
+            with open(output_path, 'r', encoding='utf-8') as f_output:
                 self.assertEqual(
                     f_output.read(),
                     '''\
@@ -303,12 +307,17 @@ env:
 '''
             )
         ]
-        with create_test_files(test_files) as input_dir:
+        with create_test_files(test_files) as input_dir, \
+             create_test_files([]) as output_dir:
+            input_path = os.path.join(input_dir, 'template.txt')
+            output_path = os.path.join(output_dir, 'other.txt')
             config_path = os.path.join(input_dir, 'config.config')
             with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
                  unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
                 with self.assertRaises(SystemExit) as cm_exc:
                     main([
+                        input_path,
+                        output_path,
                         '-c', config_path,
                         '-e', 'env',
                         '--key', 'a', '{b: bonk}',
@@ -374,41 +383,6 @@ unknown environment 'unknown'
             self.assertEqual(stdout.getvalue(), '')
             self.assertEqual(stderr.getvalue(), '')
             with open(os.path.join(output_dir, 'other.txt'), 'r', encoding='utf-8') as f_output:
-                self.assertEqual(f_output.read(), 'the value of "foo" is "bar"')
-
-    def test_file_to_stdout(self):
-        test_files = [
-            ('template.txt', 'the value of "foo" is "{{foo}}"')
-        ]
-        with create_test_files(test_files) as input_dir:
-            input_path = os.path.join(input_dir, 'template.txt')
-            with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
-                 unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
-                main([input_path, '--key', 'foo', 'bar'])
-
-            self.assertEqual(stdout.getvalue(), 'the value of "foo" is "bar"')
-            self.assertEqual(stderr.getvalue(), '')
-
-    def test_stdin_to_stdout(self):
-        with unittest_mock.patch('sys.stdin', new=StringIO('the value of "foo" is "{{foo}}"')), \
-             unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
-             unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
-            main(['--key', 'foo', 'bar'])
-
-        self.assertEqual(stdout.getvalue(), 'the value of "foo" is "bar"')
-        self.assertEqual(stderr.getvalue(), '')
-
-    def test_stdin_to_file(self):
-        with create_test_files([]) as output_dir:
-            output_path = os.path.join(output_dir, 'other.txt')
-            with unittest_mock.patch('sys.stdin', new=StringIO('the value of "foo" is "{{foo}}"')), \
-                 unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
-                 unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
-                main(['-', output_path, '--key', 'foo', 'bar'])
-
-            self.assertEqual(stdout.getvalue(), '')
-            self.assertEqual(stderr.getvalue(), '')
-            with open(output_path, 'r', encoding='utf-8') as f_output:
                 self.assertEqual(f_output.read(), 'the value of "foo" is "bar"')
 
     def test_file_to_dir(self):
@@ -482,7 +456,7 @@ unknown environment 'unknown'
 
             self.assertEqual(cm_exc.exception.code, 2)
             self.assertEqual(stdout.getvalue(), '')
-            self.assertEqual(stderr.getvalue(), f"{input_path}: error: [Errno 2] No such file or directory: '{input_path}'\n")
+            self.assertEqual(stderr.getvalue(), f"{input_path}: template file or directory not found\n")
             self.assertFalse(os.path.exists(input_path))
             self.assertFalse(os.path.exists(output_path))
 
@@ -612,7 +586,7 @@ unknown environment 'unknown'
                     main([input_dir, output_dir])
 
             self.assertEqual(stdout.getvalue(), '')
-            self.assertEqual(stderr.getvalue(), f"{os.path.join(input_dir, 'template.txt')}: error: unexpected 'end of statement block'\n")
+            self.assertEqual(stderr.getvalue(), f"{os.path.join(input_dir, 'template.txt')}:1: unexpected 'end of statement block'\n")
 
     def test_rename_error_extra_args(self):
         test_files = [
@@ -633,7 +607,7 @@ unknown environment 'unknown'
             self.assertEqual(stdout.getvalue(), '')
             self.assertEqual(
                 stderr.getvalue(),
-                f"{os.path.join(input_dir, 'template.txt')}: error: expected token 'end of statement block', got 'extra'\n"
+                f"{os.path.join(input_dir, 'template.txt')}:1: expected token 'end of statement block', got 'extra'\n"
             )
 
     def test_rename_error_path_non_str(self):
@@ -785,7 +759,7 @@ template_specialize_rename invalid path '../bar.txt\'''')
             self.assertEqual(stdout.getvalue(), '')
             self.assertEqual(
                 stderr.getvalue(),
-                f"{os.path.join(input_dir, 'template.txt')}: error: template_specialize_rename - invalid source path Undefined\n"
+                f"{os.path.join(input_dir, 'template.txt')}: error: 'foobar' is undefined\n"
             )
 
     def test_rename_error_dst_undefined(self):
@@ -807,7 +781,7 @@ template_specialize_rename invalid path '../bar.txt\'''')
             self.assertEqual(stdout.getvalue(), '')
             self.assertEqual(
                 stderr.getvalue(),
-                f"{os.path.join(input_dir, 'template.txt')}: error: template_specialize_rename - invalid destination name Undefined\n"
+                f"{os.path.join(input_dir, 'template.txt')}: error: 'foobar' is undefined\n"
             )
 
     def test_aws_parameter_store(self):
@@ -829,23 +803,28 @@ template_specialize_rename invalid path '../bar.txt\'''')
                 }
             }
 
-        with create_test_files(test_files) as input_dir:
+        with create_test_files(test_files) as input_dir, \
+             create_test_files([]) as output_dir:
             input_path = os.path.join(input_dir, 'template.txt')
+            output_path = os.path.join(output_dir, 'other.txt')
             with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
                  unittest_mock.patch('sys.stderr', new=StringIO()) as stderr, \
                  unittest_mock.patch('botocore.session') as mock_session:
                 mock_session.get_session.return_value.create_client.return_value.get_parameter.side_effect = get_parameter
-                main([input_path, '--key', 'foo', 'a"[bar}'])
+                main([input_path, output_path, '--key', 'foo', 'a"[bar}'])
 
-            self.assertEqual(
-                stdout.getvalue(),
-                '''\
+            self.assertEqual(stdout.getvalue(), '')
+            self.assertEqual(stderr.getvalue(), '')
+
+            with open(output_path, 'r') as f_output:
+                self.assertEqual(
+                    f_output.read(),
+                    '''\
 "some/string-{value}"
 some/string-{value}
 a"[bar}-{value}
 '''
-            )
-            self.assertEqual(stderr.getvalue(), '')
+                )
 
             # get_parameter results should be cached between blocks.
             mock_session.get_session.return_value.create_client.return_value.assert_has_calls([
@@ -863,8 +842,10 @@ a"[bar}-{value}
             )
         ]
 
-        with create_test_files(test_files) as input_dir:
+        with create_test_files(test_files) as input_dir, \
+             create_test_files([]) as output_dir:
             input_path = os.path.join(input_dir, 'template.txt')
+            output_path = os.path.join(output_dir, 'other.txt')
             with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
                  unittest_mock.patch('sys.stderr', new=StringIO()) as stderr, \
                  unittest_mock.patch('botocore.session') as mock_session:
@@ -872,7 +853,7 @@ a"[bar}-{value}
                     botocore.exceptions.ClientError({'Error': {'Code': 'SomeError'}}, 'GetParameter')
 
                 with self.assertRaises(SystemExit) as cm_exc:
-                    main([input_path])
+                    main([input_path, output_path])
 
             self.assertEqual(cm_exc.exception.code, 2)
             self.assertEqual(stdout.getvalue(), '')
