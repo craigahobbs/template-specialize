@@ -7,7 +7,7 @@
 
 **template-specialize** is a command-line tool for rendering
 [Jinja2](https://jinja.palletsprojects.com/en/3.0.x/templates/)
-templates. It renders individual template files as well as directories of template files.
+templates.
 
 For example, consider this Markdown name tag template, "nametag.md":
 
@@ -20,35 +20,34 @@ For example, consider this Markdown name tag template, "nametag.md":
 {% endif %}
 ```
 
-To render the template file, execute template-specialize as follows. By default, templates are
-rendered to the terminal:
+To render the template, execute template-specialize as follows:
 
 ```
-$ template-specialize nametag.md --key name 'John Doe'
+$ template-specialize nametag.md nametag-roy.md -k name 'Roy Hobbs' -k title 'The best there ever was'
+```
+
+Afterward, the output file contains the rendered template:
+
+``` markdown
 ## Hello, my name is
 
-# John Doe
+# Roy Hobbs
+
+### The best there ever was
 ```
 
-You can render the template file to an output file:
+You can also render directories of templates to an output directory:
 
 ```
-$ template-specialize nametag.md nametag-roy.md --key name 'Roy Hobbs' --key title 'The best there ever was'
-```
-
-You can also render templates contained within one or more directories to an output directory:
-
-```
-$ template-specialize templates/ output/ --key var value
+$ template-specialize template/ output/ -k name value
 ```
 
 
 ## Environment Files
 
-template-specialize was created to "specialize" web service configuration files for different
-runtime environments. Environment files are [YAML](https://yaml.org/spec/1.2/spec.html) files that
-allow for the definition of inheritable, structured template configuration values. Consider the
-following environments file:
+template-specialize was originally created to "specialize" web service configuration files for different runtime
+environments. Environment files are [YAML](https://yaml.org/spec/1.2/spec.html) files that allow for the definition of
+inheritable, structured template configuration values. Consider the following environments file:
 
 ``` yaml
 base:
@@ -72,8 +71,8 @@ live:
      db_name: live-db
 ```
 
-To render a template file using an environment, specify the environment file (or files) and the
-environment name with which to render the template:
+To render a template file using an environment, specify the environment file (or files) and the environment name with
+which to render the template:
 
 ```
 $ template-specialize config-template.yaml config.yaml -c environments.yaml -e test
@@ -82,7 +81,7 @@ $ template-specialize config-template.yaml config.yaml -c environments.yaml -e t
 To view the template configuration data use the "--dump" argument:
 
 ```
-$ template-specialize -c environments.yaml -e test --dump
+$ template-specialize config-template.yaml config.yaml -c environments.yaml -e test --dump
 db_host: test-db-host
 db_name: test-db
 service_name: my-service
@@ -128,7 +127,7 @@ since we don't want the empty utility file in the output, we delete it using the
 with no second argument. Here's an example usage of our Python project template:
 
 ```
-$ template-specialize python-package my-package --key package_name my_package
+$ template-specialize python-package my-package -k package_name my_package
 ```
 
 This command produces the following specialized template output with appropriately named package source directory and
