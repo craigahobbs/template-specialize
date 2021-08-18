@@ -1,8 +1,6 @@
 # Licensed under the MIT License
 # https://github.com/craigahobbs/template-specialize/blob/main/LICENSE
 
-# pylint: disable=missing-class-docstring, missing-function-docstring, missing-module-docstring
-
 import unittest
 import unittest.mock as unittest_mock
 
