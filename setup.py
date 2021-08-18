@@ -1,6 +1,8 @@
 # Licensed under the MIT License
 # https://github.com/craigahobbs/template-specialize/blob/main/LICENSE
 
+# pylint: disable=missing-function-docstring, missing-module-docstring
+
 import os
 
 from setuptools import setup
@@ -18,7 +20,7 @@ def main():
         long_description=long_description,
         long_description_content_type='text/markdown',
         version='1.3.1',
-        author='Craig Hobbs',
+        author='Craig A. Hobbs',
         author_email='craigahobbs@gmail.com',
         keywords='jinja2 template render specialize',
         url='https://github.com/craigahobbs/template-specialize',

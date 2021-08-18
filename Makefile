@@ -19,5 +19,3 @@ clean:
 	rm -rf Makefile.base pylintrc
 
 TESTS_REQUIRE := "botocore >= 1.0.0"
-
-PYLINT_ARGS := $(PYLINT_ARGS) --disable=missing-docstring

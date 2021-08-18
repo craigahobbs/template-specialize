@@ -1,6 +1,12 @@
 # Licensed under the MIT License
 # https://github.com/craigahobbs/template-specialize/blob/main/LICENSE
 
+# pylint: disable=missing-class-docstring
+
+"""
+template-specialize command-line script main module
+"""
+
 import argparse
 from itertools import chain
 import os
@@ -15,8 +21,11 @@ from .aws_parameter_store import ParameterStoreExtension
 
 
 def main(argv=None):
+    """
+    template-specialize command-line script main entry point
+    """
 
-    # Command line parsing
+    # Command line arguments
     parser = argparse.ArgumentParser(prog='template-specialize')
     parser.add_argument('src_path', metavar='SRC',
                         help='the source template file or directory')

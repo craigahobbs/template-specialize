@@ -1,6 +1,8 @@
 # Licensed under the MIT License
 # https://github.com/craigahobbs/template-specialize/blob/main/LICENSE
 
+# pylint: disable=missing-class-docstring, missing-module-docstring
+
 try:
     import botocore.session
     import botocore.exceptions
