@@ -1,3 +1,7 @@
+## 1.3.3 (2021-08-18)
+
+- [c4a16a0](https://github.com/craigahobbs/template-specialize/commit/c4a16a0) - updates from python-package-template
+
 ## 1.3.2 (2021-08-18)
 
 - [65debd5](https://github.com/craigahobbs/template-specialize/commit/65debd5) - updates from python-package-template
