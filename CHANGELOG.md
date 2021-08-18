@@ -1,3 +1,7 @@
+## 1.3.2 (2021-08-18)
+
+- [65debd5](https://github.com/craigahobbs/template-specialize/commit/65debd5) - updates from python-package-template
+
 ## 1.3.1 (2021-08-09)
 
 - [2be6a37](https://github.com/craigahobbs/template-specialize/commit/2be6a37) - fix readme examples
