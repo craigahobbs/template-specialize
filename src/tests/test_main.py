@@ -520,6 +520,39 @@ unknown environment 'unknown'
             with open(os.path.join(output_dir, 'newdir', 'subtemplate.txt'), 'r', encoding='utf-8') as f_output:
                 self.assertEqual(f_output.read(), 'agree, "bar" is the value of "foo"')
 
+    def test_rename_unchanged(self):
+        test_files = [
+            (
+                'template.txt',
+                '''\
+{# Delete template.txt #}
+{% template_specialize_rename "template.txt" %}
+
+{# Rename the file and the sub-directory #}
+{% template_specialize_rename "subdir/subtemplate.txt", "subtemplate.txt" %}
+{% template_specialize_rename "subdir", "subdir" %}
+'''
+            ),
+            (('subdir', 'subtemplate.txt'), 'agree, "{{foo}}" is the value of "foo"')
+        ]
+        with create_test_files(test_files) as input_dir, \
+             create_test_files([]) as output_dir:
+            with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
+                 unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
+
+                # Destination directory exists and is non-empty
+                os.mkdir(os.path.join(output_dir, 'newdir'))
+                os.mkdir(os.path.join(output_dir, 'newdir', 'newsubdir'))
+
+                main([input_dir, output_dir, '--key', 'foo', 'bar'])
+
+            self.assertEqual(stdout.getvalue(), '')
+            self.assertEqual(stderr.getvalue(), '')
+            self.assertFalse(os.path.exists(os.path.join(output_dir, 'template.txt')))
+            self.assertTrue(os.path.exists(os.path.join(output_dir, 'subdir')))
+            with open(os.path.join(output_dir, 'subdir', 'subtemplate.txt'), 'r', encoding='utf-8') as f_output:
+                self.assertEqual(f_output.read(), 'agree, "bar" is the value of "foo"')
+
     def test_delete_directory(self):
         test_files = [
             (

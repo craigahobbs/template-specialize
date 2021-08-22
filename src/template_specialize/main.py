@@ -133,7 +133,7 @@ def main(argv=None):
                 else:
                     # If destination is a directory, delete it first
                     rename_dst_path = os.path.join(os.path.dirname(rename_path), rename_name)
-                    if os.path.isdir(rename_dst_path):
+                    if os.path.isdir(rename_dst_path) and not os.path.samefile(rename_path, rename_dst_path):
                         shutil.rmtree(rename_dst_path)
 
                     # Rename...
