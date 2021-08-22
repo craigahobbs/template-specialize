@@ -1,3 +1,7 @@
+## 1.3.4 (2021-08-22)
+
+- [950dc72](https://github.com/craigahobbs/template-specialize/commit/950dc72) - fix rename to same name
+
 ## 1.3.3 (2021-08-18)
 
 - [c4a16a0](https://github.com/craigahobbs/template-specialize/commit/c4a16a0) - updates from python-package-template
