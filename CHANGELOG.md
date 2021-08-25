@@ -1,3 +1,7 @@
+## 1.3.5 (2021-08-24)
+
+- [f3245bd](https://github.com/craigahobbs/template-specialize/commit/f3245bd) - update readme
+
 ## 1.3.4 (2021-08-22)
 
 - [950dc72](https://github.com/craigahobbs/template-specialize/commit/950dc72) - fix rename to same name
