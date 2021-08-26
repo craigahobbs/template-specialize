@@ -849,7 +849,7 @@ template_specialize_rename invalid path '../bar.txt\'''')
             self.assertEqual(stdout.getvalue(), '')
             self.assertEqual(stderr.getvalue(), '')
 
-            with open(output_path, 'r') as f_output:
+            with open(output_path, 'r', encoding='utf-8') as f_output:
                 self.assertEqual(
                     f_output.read(),
                     '''\
