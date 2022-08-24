@@ -1,3 +1,9 @@
+## 1.4.0 (2022-08-24)
+
+- [21437e1](https://github.com/craigahobbs/template-specialize/commit/21437e1) - eliminate pyyaml dependency
+
+- [d608c30](https://github.com/craigahobbs/template-specialize/commit/d608c30) - add python 3.11 support, remove python 3.6
+
 ## 1.3.5 (2021-08-24)
 
 - [f3245bd](https://github.com/craigahobbs/template-specialize/commit/f3245bd) - update readme
