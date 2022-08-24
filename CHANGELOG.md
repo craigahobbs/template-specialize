@@ -1,3 +1,7 @@
+## 1.4.1 (2022-08-24)
+
+- [f19a96c](https://github.com/craigahobbs/template-specialize/commit/f19a96c) - only support javascript comments
+
 ## 1.4.0 (2022-08-24)
 
 - [21437e1](https://github.com/craigahobbs/template-specialize/commit/21437e1) - eliminate pyyaml dependency
