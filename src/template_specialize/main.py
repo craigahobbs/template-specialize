@@ -175,7 +175,7 @@ class TemplateSpecializeRenameExtension(jinja2.ext.Extension):
         return ''
 
 
-RE_JSON_COMMENT = re.compile(r'^\s*(?:#|//)')
+RE_JSON_COMMENT = re.compile(r'^\s*//')
 
 
 def _parse_environments(text, environments):

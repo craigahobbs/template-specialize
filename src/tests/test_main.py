@@ -885,7 +885,7 @@ class TestParseEnvironments(unittest.TestCase):
         environments = {}
         _parse_environments(
             '''\
-# This is a comment
+// This is a comment
 {
     // This is another comment
     "env": {

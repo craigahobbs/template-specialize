@@ -49,7 +49,7 @@ template-specialize was originally created to "specialize" web service configura
 environments. Environment files are JSON files that allow for the definition of inheritable, structured template
 configuration values. Consider the following environments file:
 
-``` json
+``` javascript
 {
     "base": {
         "values": {
@@ -71,7 +71,7 @@ configuration values. Consider the following environments file:
         }
     },
 
-    # The live/production environment
+    // The live/production environment
     "live": {
         "parents": ["base"],
         "values": {
