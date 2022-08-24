@@ -7,13 +7,13 @@ template-specialize command-line script main module
 
 import argparse
 from itertools import chain
+import json
 import os
+import re
 import shutil
-import warnings
 
 import jinja2
 import jinja2.ext
-import yaml
 
 from .aws_parameter_store import ParameterStoreExtension
 
@@ -45,8 +45,8 @@ def main(argv=None):
         for environment_file in args.environment_files:
             try:
                 with open(environment_file, 'r', encoding='utf-8') as f_environment:
-                    _parse_environments(f_environment, environments)
-            except Exception as exc: # pylint: disable=broad-except
+                    _parse_environments(f_environment.read(), environments)
+            except ValueError as exc:
                 parser.exit(message=f'{exc}\n', status=2)
 
     # Build the template variables dict
@@ -54,16 +54,18 @@ def main(argv=None):
     try:
         if args.environment is not None:
             _merge_environment(environments, args.environment, template_variables, set())
-        with warnings.catch_warnings():
-            warnings.simplefilter('ignore', DeprecationWarning)
-            for key, value in args.keys:
-                _merge_values({key: yaml.full_load(value)}, template_variables)
+        for key, value in args.keys:
+            try:
+                value_json = json.loads(value)
+            except ValueError:
+                value_json = value
+            _merge_values({key: value_json}, template_variables)
     except Exception as exc: # pylint: disable=broad-except
         parser.exit(message=f'{exc}\n', status=2)
 
     # Dump the template variables, if necessary
     if args.dump:
-        parser.exit(message=yaml.dump(template_variables, default_flow_style=False))
+        parser.exit(message=f'{json.dumps(template_variables, indent=4)}\n')
 
     # Get the source template file paths
     is_dir = os.path.isdir(args.src_path)
@@ -173,15 +175,14 @@ class TemplateSpecializeRenameExtension(jinja2.ext.Extension):
         return ''
 
 
-def _parse_environments(environment_yaml, environments):
-    with warnings.catch_warnings():
-        warnings.simplefilter('ignore', DeprecationWarning)
-        loaded_environments = yaml.full_load(environment_yaml)
+RE_JSON_COMMENT = re.compile(r'^\s*(?:#|//)')
+
+
+def _parse_environments(text, environments):
+    loaded_environments = json.loads('\n'.join(line for line in text.splitlines() if not RE_JSON_COMMENT.match(line)))
     if not isinstance(loaded_environments, dict):
         raise ValueError(f'invalid environments container: {loaded_environments!r:.100s}')
     for environment_name, environment_info in loaded_environments.items():
-        if not isinstance(environment_name, str):
-            raise ValueError(f'invalid environment name {environment_name!r:.100s}')
         if environment_name in environments:
             raise ValueError(f'redefinition of environment {environment_name!r:.100s}')
         if not isinstance(environment_info, dict):

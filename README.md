@@ -46,45 +46,58 @@ $ template-specialize template/ output/ -k name value
 ## Environment Files
 
 template-specialize was originally created to "specialize" web service configuration files for different runtime
-environments. Environment files are [YAML](https://yaml.org/spec/1.2/spec.html) files that allow for the definition of
-inheritable, structured template configuration values. Consider the following environments file:
+environments. Environment files are JSON files that allow for the definition of inheritable, structured template
+configuration values. Consider the following environments file:
 
-``` yaml
-base:
-  values:
-    service_name: my-service
+``` json
+{
+    "base": {
+        "values": {
+            "service_name": "my-service"
+        }
+    },
+    "test_base": {
+        "parents": ["base"],
+        "values": {
+            "db_host": "test-db-host"
+        }
+    },
 
-test_base:
-  parents: [base]
-  values:
-     db_host: test-db-host
+    // The test environment
+    "test": {
+        "parents": ["test_base"],
+        "values": {
+            "db_name": "test-db"
+        }
+    },
 
-test:
-  parents: [test_base]
-  values:
-     db_name: test-db
-
-live:
-  parents: [base]
-  values:
-     db_host: live-db-host
-     db_name: live-db
+    # The live/production environment
+    "live": {
+        "parents": ["base"],
+        "values": {
+            "db_host": "live-db-host",
+            "db_name": "live-db"
+        }
+    }
+}
 ```
 
 To render a template file using an environment, specify the environment file (or files) and the environment name with
 which to render the template:
 
 ```
-$ template-specialize config-template.yaml config.yaml -c environments.yaml -e test
+$ template-specialize config-template.json config.json -c environments.json -e test
 ```
 
 To view the template configuration data use the "--dump" argument:
 
 ```
-$ template-specialize config-template.yaml config.yaml -c environments.yaml -e test --dump
-db_host: test-db-host
-db_name: test-db
-service_name: my-service
+$ template-specialize config-template.json config.json -c environments.json -e test --dump
+{
+    "db_host": "test-db-host",
+    "db_name": "test-db",
+    "service_name": "my-service"
+}
 ```
 
 
@@ -155,10 +168,12 @@ template-specialize can retrieve template values from
 using
 [botocore](https://pypi.org/project/botocore/).
 
-Here's an example of a YAML configuration file with a Parameter Store secret:
+Here's an example of a JSON configuration file with a Parameter Store secret:
 
 ``` jinja2
-my_secret: {% filter tojson %}{% aws_parameter_store 'parameter-name' %}{% endfilter %}
+{
+    "my_secret": {% filter tojson %}{% aws_parameter_store 'parameter-name' %}{% endfilter %}
+}
 ```
 
 botocore is usually configured using

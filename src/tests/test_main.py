@@ -4,7 +4,6 @@
 from contextlib import contextmanager
 from io import StringIO
 import os
-import re
 import sys
 from tempfile import TemporaryDirectory
 import unittest
@@ -60,53 +59,11 @@ class TestMain(unittest.TestCase):
             with open(os.path.join(output_dir, 'other.txt'), 'r', encoding='utf-8') as f_output:
                 self.assertEqual(f_output.read(), 'the value of "foo" is "bar"')
 
-    def test_invalid_keys_values(self):
-        with create_test_files([]) as input_dir, \
-             create_test_files([]) as output_dir:
-            input_path = os.path.join(input_dir, 'template.txt')
-            output_path = os.path.join(output_dir, 'other.txt')
-            with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
-                 unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
-                with self.assertRaises(SystemExit) as cm_exc:
-                    main([input_path, output_path, '--key', 'a', 'a: b: c'])
-
-        self.assertEqual(cm_exc.exception.code, 2)
-        self.assertEqual(stdout.getvalue(), '')
-        self.assertEqual(
-            stderr.getvalue(),
-            '''\
-mapping values are not allowed here
-  in "<unicode string>", line 1, column 5:
-    a: b: c
-        ^
-'''
-        )
-
     def test_config_errors(self):
         test_files = [
             (
                 'test.config',
-                '''\
-env1:
-  values:
-    a:
-      a: "env1 a.a"
-    b:
-      a: "env1 b.a"
-    asdf1
-
-env2:
-  values:
-    a: ["env2 a.0"]
-    asdf2
-'''
-            ),
-            (
-                'test2.config',
-                '''\
-env3:
-    parents: [env1, env2]
-'''
+                'asdf2'
             ),
             (
                 'template.txt',
@@ -119,7 +76,6 @@ b.a = {{b.a}}
         with create_test_files(test_files) as input_dir, \
              create_test_files([]) as output_dir:
             test_path = os.path.join(input_dir, 'test.config')
-            test2_path = os.path.join(input_dir, 'test2.config')
             input_path = os.path.join(input_dir, 'template.txt')
             output_path = os.path.join(output_dir, 'other.txt')
             with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
@@ -127,7 +83,6 @@ b.a = {{b.a}}
                 with self.assertRaises(SystemExit) as cm_exc:
                     main([
                         '-c', test_path,
-                        '-c', test2_path,
                         '-e', 'env3',
                         '--key', 'b', '[b0]',
                         input_path,
@@ -137,12 +92,9 @@ b.a = {{b.a}}
             self.assertEqual(cm_exc.exception.code, 2)
             self.assertEqual(stdout.getvalue(), '')
             self.assertEqual(
-                re.sub('^.+?test', 'test', stderr.getvalue(), flags=re.MULTILINE),
+                stderr.getvalue(),
                 '''\
-while scanning a simple key
-test.config", line 7, column 5
-could not find expected ':'
-test.config", line 9, column 1
+Expecting value: line 1 column 1 (char 0)
 '''
             )
             self.assertFalse(os.path.exists(output_path))
@@ -152,27 +104,39 @@ test.config", line 9, column 1
             (
                 'test.config',
                 '''\
-env1:
-  values:
-    a:
-      a: "foo"
-      c: [1, 2]
-
-env2:
-  values:
-    b:
-      a: "nope"
+{
+    "env1": {
+        "values": {
+            "a": {
+                "a": "foo",
+                "c": [1, 2]
+            }
+        }
+    },
+    "env2": {
+        "values": {
+            "b": {
+                "a": "nope"
+            }
+        }
+    }
+}
 '''
             ),
             (
                 'test2.config',
                 '''\
-env3:
-  parents: [env1]
-  values:
-    a:
-      b: "bar"
-      c: [4, 5, 3]
+{
+    "env3": {
+        "parents": ["env1"],
+        "values": {
+            "a": {
+                "b": "bar",
+                "c": [4, 5, 3]
+            }
+        }
+    }
+}
 '''
             ),
             (
@@ -223,9 +187,9 @@ a.c = {{a.c}}
             with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
                  unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
                 main([
-                    '--key', 'a', '{a: foo}',
-                    '--key', 'a', '{b: bar}',
-                    '--key', 'a', '{c: [3]}',
+                    '--key', 'a', '{"a": "foo"}',
+                    '--key', 'a', '{"b": "bar"}',
+                    '--key', 'a', '{"c": [3]}',
                     input_path,
                     output_path
                 ])
@@ -247,12 +211,17 @@ a.c = [3]
             (
                 'config.config',
                 '''\
-env:
-  values:
-    a:
-      a: foo
-      b: bar
-      c: [1]
+{
+    "env": {
+        "values": {
+            "a": {
+                "a": "foo",
+                "b": "bar",
+                "c": [1]
+            }
+        }
+    }
+}
 '''
             ),
             (
@@ -274,9 +243,9 @@ a.c = {{a.c}}
                 main([
                     '-c', config_path,
                     '-e', 'env',
-                    '--key', 'a', '{b: bonk}',
-                    '--key', 'a', '{c: [10]}',
-                    '--key', 'a', '{c: [12, 11]}',
+                    '--key', 'a', '{"b": "bonk"}',
+                    '--key', 'a', '{"c": [10]}',
+                    '--key', 'a', '{"c": [12, 11]}',
                     input_path,
                     output_path
                 ])
@@ -298,12 +267,17 @@ a.c = [12, 11]
             (
                 'config.config',
                 '''\
-env:
-  values:
-    a:
-      a: foo
-      b: bar
-      c: [1]
+{
+    "env": {
+        "values": {
+            "a": {
+                "a": "foo",
+                "b": "bar",
+                "c": [1]
+            }
+        }
+    }
+}
 '''
             )
         ]
@@ -320,20 +294,24 @@ env:
                         output_path,
                         '-c', config_path,
                         '-e', 'env',
-                        '--key', 'a', '{b: bonk}',
-                        '--key', 'a', '{c: [12, 11]}',
+                        '--key', 'a', '{"b": "bonk"}',
+                        '--key', 'a', '{"c": [12, 11]}',
                         '--dump'
                     ])
 
             self.assertEqual(cm_exc.exception.code, 0)
             self.assertEqual(stdout.getvalue(), '')
             self.assertEqual(stderr.getvalue(), '''\
-a:
-  a: foo
-  b: bonk
-  c:
-  - 12
-  - 11
+{
+    "a": {
+        "a": "foo",
+        "b": "bonk",
+        "c": [
+            12,
+            11
+        ]
+    }
+}
 ''')
 
     def test_unknown_environment(self):
@@ -341,10 +319,15 @@ a:
             (
                 'config.config',
                 '''\
-env:
-  values:
-    a:
-      a: foo
+{
+    "env": {
+        "values": {
+            "a": {
+                "a": "foo"
+            }
+        }
+    }
+}
 '''
             )
         ]
@@ -901,17 +884,23 @@ class TestParseEnvironments(unittest.TestCase):
     def test_parse_environments(self):
         environments = {}
         _parse_environments(
-            StringIO('''\
+            '''\
 # This is a comment
-env:
-    values:
-        key: value
-
-env2:
-    parents: [env]
-    values:
-        key: value
-'''),
+{
+    // This is another comment
+    "env": {
+        "values": {
+            "key": "value"
+        }
+    },
+    "env2": {
+        "parents": ["env"],
+        "values": {
+            "key": "value"
+        }
+    }
+}
+''',
             environments
         )
         self.assertDictEqual(environments, {
@@ -932,33 +921,23 @@ env2:
         environments = {}
         with self.assertRaises(ValueError) as cm_exc:
             _parse_environments(
-                StringIO('''\
+                '''\
 [1, 2, 3]
-'''),
+''',
                 environments
             )
         self.assertEqual(str(cm_exc.exception), 'invalid environments container: [1, 2, 3]')
-        self.assertDictEqual(environments, {})
-
-    def test_parse_environments_invalid_environment_name(self):
-        environments = {}
-        with self.assertRaises(ValueError) as cm_exc:
-            _parse_environments(
-                StringIO('''\
-1:
-'''),
-                environments
-            )
-        self.assertEqual(str(cm_exc.exception), 'invalid environment name 1')
         self.assertDictEqual(environments, {})
 
     def test_parse_environments_redefined_environment(self):
         environments = {'env': {}}
         with self.assertRaises(ValueError) as cm_exc:
             _parse_environments(
-                StringIO('''\
-env:
-'''),
+                '''\
+{
+    "env": {}
+}
+''',
                 environments
             )
         self.assertEqual(str(cm_exc.exception), "redefinition of environment 'env'")
@@ -968,9 +947,11 @@ env:
         environments = {}
         with self.assertRaises(ValueError) as cm_exc:
             _parse_environments(
-                StringIO('''\
-env: [1, 2, 3]
-'''),
+                '''\
+{
+    "env": [1, 2, 3]
+}
+''',
                 environments
             )
         self.assertEqual(str(cm_exc.exception), "invalid environment metadata for environment 'env': [1, 2, 3]")
@@ -980,10 +961,13 @@ env: [1, 2, 3]
         environments = {}
         with self.assertRaises(ValueError) as cm_exc:
             _parse_environments(
-                StringIO('''\
-env:
-  parents: {}
-'''),
+                '''\
+{
+    "env": {
+        "parents": {}
+    }
+}
+''',
                 environments
             )
         self.assertEqual(str(cm_exc.exception), "invalid parents for environment 'env': {}")
@@ -993,10 +977,13 @@ env:
         environments = {}
         with self.assertRaises(ValueError) as cm_exc:
             _parse_environments(
-                StringIO('''\
-env:
-  parents: ['env2', 1]
-'''),
+                '''\
+{
+    "env": {
+        "parents": ["env2", 1]
+    }
+}
+''',
                 environments
             )
         self.assertEqual(str(cm_exc.exception), "invalid parents for environment 'env': ['env2', 1]")
@@ -1006,10 +993,13 @@ env:
         environments = {}
         with self.assertRaises(ValueError) as cm_exc:
             _parse_environments(
-                StringIO('''\
-env:
-  values: []
-'''),
+                '''\
+{
+    "env": {
+        "values": []
+    }
+}
+''',
                 environments
             )
         self.assertEqual(str(cm_exc.exception), "invalid values for environment 'env': []")
