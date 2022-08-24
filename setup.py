@@ -17,7 +17,7 @@ def main():
         description='Command-line tool for rendering Jinja2 templates',
         long_description=long_description,
         long_description_content_type='text/markdown',
-        version='1.3.5',
+        version='1.4.0',
         author='Craig A. Hobbs',
         author_email='craigahobbs@gmail.com',
         keywords='jinja2 template render specialize',
