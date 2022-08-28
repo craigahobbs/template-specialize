@@ -1,3 +1,5 @@
+# Changelog
+
 ## 1.4.1 (2022-08-24)
 
 - [f19a96c](https://github.com/craigahobbs/template-specialize/commit/f19a96c) - only support javascript comments
