@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.4.2 (2022-10-31)
+
+- [f269e4a](https://github.com/craigahobbs/template-specialize/commit/f269e4a) - add pyproject.toml and setup.cfg, remove setup.py
+
 ## 1.4.1 (2022-08-24)
 
 - [f19a96c](https://github.com/craigahobbs/template-specialize/commit/f19a96c) - only support javascript comments
