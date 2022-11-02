@@ -110,7 +110,8 @@ consider a Python project template with the following structure:
 .
 |-- README.md
 |-- package-name.txt
-|-- setup.py
+|-- pyproject.toml
+|-- setup.cfg
 `-- src
     |-- __init__.py
     |-- package_name
@@ -149,7 +150,8 @@ source files:
 ```
 .
 |-- README.md
-|-- setup.py
+|-- pyproject.toml
+|-- setup.cfg
 `-- src
     |-- __init__.py
     |-- my_package
