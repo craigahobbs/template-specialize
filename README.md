@@ -9,38 +9,49 @@
 [Jinja2](https://jinja.palletsprojects.com/en/3.0.x/templates/)
 templates.
 
+
+## Links
+
+- [Source code](https://github.com/craigahobbs/template-specialize)
+
+
+## Render a Template File
+
 For example, consider this Markdown name tag template, "nametag.md":
 
-``` jinja2
+~~~ jinja2
 ## Hello, my name is
 
 # {{name}}
 {% if title is defined %}
 ### {{title}}
 {% endif %}
-```
+~~~
 
 To render the template, execute template-specialize as follows:
 
-```
+~~~
 $ template-specialize nametag.md nametag-roy.md -k name 'Roy Hobbs' -k title 'The best there ever was'
-```
+~~~
 
 Afterward, the output file contains the rendered template:
 
-```
+~~~
 ## Hello, my name is
 
 # Roy Hobbs
 
 ### The best there ever was
-```
+~~~
+
+
+## Render a Directory Template
 
 You can also render directories of templates to an output directory:
 
-```
+~~~
 $ template-specialize template/ output/ -k name value
-```
+~~~
 
 
 ## Environment Files
@@ -49,7 +60,7 @@ template-specialize was originally created to "specialize" web service configura
 environments. Environment files are JSON files that allow for the definition of inheritable, structured template
 configuration values. Consider the following environments file:
 
-``` javascript
+~~~ javascript
 {
     "base": {
         "values": {
@@ -80,25 +91,25 @@ configuration values. Consider the following environments file:
         }
     }
 }
-```
+~~~
 
 To render a template file using an environment, specify the environment file (or files) and the environment name with
 which to render the template:
 
-```
+~~~
 $ template-specialize config-template.json config.json -c environments.json -e test
-```
+~~~
 
 To view the template configuration data use the "--dump" argument:
 
-```
+~~~
 $ template-specialize config-template.json config.json -c environments.json -e test --dump
 {
     "db_host": "test-db-host",
     "db_name": "test-db",
     "service_name": "my-service"
 }
-```
+~~~
 
 
 ## Renaming and Deleting Output Files
@@ -106,7 +117,7 @@ $ template-specialize config-template.json config.json -c environments.json -e t
 When specializing a template directory, it is sometimes necessary to rename an output file or directory. For example,
 consider a Python project template with the following structure:
 
-```
+~~~
 .
 |-- README.md
 |-- package-name.txt
@@ -120,13 +131,13 @@ consider a Python project template with the following structure:
     `-- tests
         |-- __init__.py
         `-- test_package_name.py
-```
+~~~
 
 As part of the specialization, we'd like to rename the "package_name" directory, the "package_name.py" file, and the
 "test_package_name.py" file to the specialized package name. To accomplish this, we add the "package-name.txt' utility
 file and call the "template_specialize_rename" Jinja2 extension:
 
-``` jinja2
+~~~ jinja2
 {# Rename template files #}
 {% template_specialize_rename 'src/tests/test_package_name.py', 'test_' + package_name + '.py' %}
 {% template_specialize_rename 'src/package_name/package_name.py', package_name + '.py' %}
@@ -134,20 +145,20 @@ file and call the "template_specialize_rename" Jinja2 extension:
 
 {# Delete the package-name.txt utility template file #}
 {% template_specialize_rename 'package-name.txt' %}
-```
+~~~
 
 First, the "template_specialize_rename" extension is used to rename the package output files and directories. Finally,
 since we don't want the empty utility file in the output, we delete it using the "template_specialize_rename" extension
 with no second argument. Here's an example usage of our Python project template:
 
-```
+~~~
 $ template-specialize python-package my-package -k package_name my_package
-```
+~~~
 
 This command produces the following specialized template output with appropriately named package source directory and
 source files:
 
-```
+~~~
 .
 |-- README.md
 |-- pyproject.toml
@@ -160,7 +171,7 @@ source files:
     `-- tests
         |-- __init__.py
         `-- test_my_package.py
-```
+~~~
 
 
 ## AWS Parameter Store
@@ -172,11 +183,11 @@ using
 
 Here's an example of a JSON configuration file with a Parameter Store secret:
 
-``` jinja2
+~~~ jinja2
 {
     "my_secret": {% filter tojson %}{% aws_parameter_store 'parameter-name' %}{% endfilter %}
 }
-```
+~~~
 
 botocore is usually configured using
 [environment variables](https://boto3.amazonaws.com/v1/documentation/api/latest/guide/configuration.html#using-environment-variables).
@@ -184,7 +195,7 @@ botocore is usually configured using
 
 ## Usage
 
-```
+~~~
 usage: template-specialize [-h] [-c FILE] [-e ENV] [-k KEY VALUE] [--dump]
                            SRC DST
 
@@ -199,14 +210,14 @@ options:
   -k KEY VALUE, --key KEY VALUE
                         add a template key and value
   --dump                dump the template variables
-```
+~~~
 
 
 ## Development
 
-This project is developed using [python-build](https://github.com/craigahobbs/python-build#readme). It was started
-using [python-template](https://github.com/craigahobbs/python-template#readme) as follows:
+This package is developed using [python-build](https://github.com/craigahobbs/python-build#readme).
+It was started using [python-template](https://github.com/craigahobbs/python-template#readme) as follows:
 
-```
+~~~
 template-specialize python-template/template/ template-specialize/ -k package template-specialize -k name 'Craig A. Hobbs' -k email 'craigahobbs@gmail.com' -k github 'craigahobbs' -k noapi 1
-```
+~~~
