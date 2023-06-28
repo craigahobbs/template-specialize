@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.4.3 (2023-06-28)
+
+- [8aa0993](https://github.com/craigahobbs/template-specialize/commit/8aa0993) - add python 3.12 support, remove python 3.7 support \(end-of-life\)
+
 ## 1.4.2 (2022-10-31)
 
 - [f269e4a](https://github.com/craigahobbs/template-specialize/commit/f269e4a) - add pyproject.toml and setup.cfg, remove setup.py
