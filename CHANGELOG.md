@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.4.4 (2023-12-01)
+
+- [fcfd3c8](https://github.com/craigahobbs/template-specialize/commit/fcfd3c8) - add the "now" builtin template variable
+
 ## 1.4.3 (2023-06-28)
 
 - [8aa0993](https://github.com/craigahobbs/template-specialize/commit/8aa0993) - add python 3.12 support, remove python 3.7 support \(end-of-life\)
