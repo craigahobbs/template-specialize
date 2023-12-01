@@ -2,6 +2,7 @@
 # https://github.com/craigahobbs/template-specialize/blob/main/LICENSE
 
 from contextlib import contextmanager
+import datetime
 from io import StringIO
 import os
 import sys
@@ -29,6 +30,13 @@ def create_test_files(file_defs):
         yield tempdir.name
     finally:
         tempdir.cleanup()
+
+
+# Mock datetime class override
+class MockDateTime(datetime.datetime):
+    @classmethod
+    def now(cls, tz=None):
+        return cls(2017, 12, 1, 7, 33)
 
 
 class TestMain(unittest.TestCase):
@@ -287,7 +295,8 @@ a.c = [12, 11]
             output_path = os.path.join(output_dir, 'other.txt')
             config_path = os.path.join(input_dir, 'config.config')
             with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
-                 unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
+                 unittest_mock.patch('sys.stderr', new=StringIO()) as stderr, \
+                 unittest_mock.patch('template_specialize.main.datetime.datetime', MockDateTime):
                 with self.assertRaises(SystemExit) as cm_exc:
                     main([
                         input_path,
@@ -310,7 +319,8 @@ a.c = [12, 11]
             12,
             11
         ]
-    }
+    },
+    "now": "2017-12-01T07:33:00"
 }
 ''')
 
@@ -367,6 +377,24 @@ unknown environment 'unknown'
             self.assertEqual(stderr.getvalue(), '')
             with open(os.path.join(output_dir, 'other.txt'), 'r', encoding='utf-8') as f_output:
                 self.assertEqual(f_output.read(), 'the value of "foo" is "bar"')
+
+    def test_file_to_file_builtins(self):
+        test_files = [
+            ('template.txt', 'the year is {{now.year}}')
+        ]
+        with create_test_files(test_files) as input_dir, \
+             create_test_files([]) as output_dir:
+            input_path = os.path.join(input_dir, 'template.txt')
+            output_path = os.path.join(output_dir, 'other.txt')
+            with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
+                 unittest_mock.patch('sys.stderr', new=StringIO()) as stderr, \
+                 unittest_mock.patch('template_specialize.main.datetime.datetime', MockDateTime):
+                main([input_path, output_path, '--key', 'foo', 'bar'])
+
+            self.assertEqual(stdout.getvalue(), '')
+            self.assertEqual(stderr.getvalue(), '')
+            with open(os.path.join(output_dir, 'other.txt'), 'r', encoding='utf-8') as f_output:
+                self.assertEqual(f_output.read(), 'the year is 2017')
 
     def test_file_to_dir(self):
         test_files = [

@@ -6,6 +6,7 @@ template-specialize command-line script main module
 """
 
 import argparse
+import datetime
 from itertools import chain
 import json
 import os
@@ -50,7 +51,9 @@ def main(argv=None):
                 parser.exit(message=f'{exc}\n', status=2)
 
     # Build the template variables dict
-    template_variables = {}
+    template_variables = {
+        'now': datetime.datetime.now()
+    }
     try:
         if args.environment is not None:
             _merge_environment(environments, args.environment, template_variables, set())
@@ -65,7 +68,8 @@ def main(argv=None):
 
     # Dump the template variables, if necessary
     if args.dump:
-        parser.exit(message=f'{json.dumps(template_variables, indent=4)}\n')
+        encoder = JSONEncoder(sort_keys=True, indent=4)
+        parser.exit(message=f'{encoder.encode(template_variables)}\n')
 
     # Get the source template file paths
     is_dir = os.path.isdir(args.src_path)
@@ -142,6 +146,13 @@ def main(argv=None):
                     os.rename(rename_path, rename_dst_path)
             except Exception as exc: # pylint: disable=broad-except
                 parser.exit(message=f'template_specialize_rename error: {exc}', status=2)
+
+
+class JSONEncoder(json.JSONEncoder):
+    def default(self, o):
+        if isinstance(o, datetime.datetime):
+            return o.isoformat()
+        return json.JSONEncoder.default(self, o) # pragma: no cover
 
 
 class TemplateSpecializeRenameExtension(jinja2.ext.Extension):

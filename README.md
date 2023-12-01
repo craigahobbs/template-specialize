@@ -54,6 +54,13 @@ $ template-specialize template/ output/ -k name value
 ~~~
 
 
+## Built-In Template Variables
+
+The following template variables are always defined:
+
+- `now` - the current datetime object
+
+
 ## Environment Files
 
 template-specialize was originally created to "specialize" web service configuration files for different runtime
