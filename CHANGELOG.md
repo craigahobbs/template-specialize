@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.5.0 (2024-01-30)
+
+- [ab67415](https://github.com/craigahobbs/template-specialize/commit/ab67415) - windows compatibility
+
 ## 1.4.4 (2023-12-01)
 
 - [fcfd3c8](https://github.com/craigahobbs/template-specialize/commit/fcfd3c8) - add the "now" builtin template variable
