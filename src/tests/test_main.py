@@ -5,6 +5,7 @@ from contextlib import contextmanager
 import datetime
 from io import StringIO
 import os
+import platform
 import sys
 from tempfile import TemporaryDirectory
 import unittest
@@ -42,7 +43,8 @@ class MockDateTime(datetime.datetime):
 class TestMain(unittest.TestCase):
 
     def test_console_script(self):
-        console_script_path = os.path.join(os.path.dirname(sys.executable), 'template-specialize')
+        script_ext = '.exe' if platform.system() == 'Windows' else ''
+        console_script_path = os.path.join(os.path.dirname(sys.executable), f'template-specialize{script_ext}')
         self.assertTrue(os.path.isfile(console_script_path))
 
     def test_module_main(self):
@@ -411,7 +413,8 @@ unknown environment 'unknown'
 
             self.assertEqual(cm_exc.exception.code, 2)
             self.assertEqual(stdout.getvalue(), '')
-            self.assertEqual(stderr.getvalue(), f"{input_path}: error: [Errno 21] Is a directory: '{output_path}'\n")
+            self.assertTrue(stderr.getvalue().startswith(f'{input_path}: error: '))
+            self.assertTrue(stderr.getvalue().endswith(f": {output_path!r}\n"))
             self.assertTrue(os.path.isfile(input_path))
             self.assertTrue(os.path.isdir(output_path))
 
@@ -448,10 +451,8 @@ unknown environment 'unknown'
 
             self.assertEqual(cm_exc.exception.code, 2)
             self.assertEqual(stdout.getvalue(), '')
-            self.assertEqual(
-                stderr.getvalue(),
-                f"{os.path.join(input_path, 'template.txt')}: error: [Errno 17] File exists: '{output_path}'\n"
-            )
+            self.assertTrue(stderr.getvalue().startswith(f"{os.path.join(input_path, 'template.txt')}: error: "))
+            self.assertTrue(stderr.getvalue().endswith(f": {output_path!r}\n"))
             self.assertTrue(os.path.isdir(input_path))
             self.assertTrue(os.path.isfile(output_path))
 
@@ -608,10 +609,8 @@ unknown environment 'unknown'
                     main([input_dir, output_dir])
 
             self.assertEqual(stdout.getvalue(), '')
-            self.assertEqual(
-                stderr.getvalue(),
-                f"template_specialize_rename error: [Errno 2] No such file or directory: '{output_missing}' -> '{output_bar}'"
-            )
+            self.assertTrue(stderr.getvalue().startswith('template_specialize_rename error: '))
+            self.assertTrue(stderr.getvalue().endswith(f': {output_missing!r} -> {output_bar!r}'))
 
     def test_rename_error_no_args(self):
         test_files = [
@@ -715,8 +714,8 @@ unknown environment 'unknown'
                     main([input_dir, output_dir])
 
             self.assertEqual(stdout.getvalue(), '')
-            self.assertEqual(stderr.getvalue(), '''\
-template_specialize_rename invalid path '../bar.txt\'''')
+            self.assertEqual(stderr.getvalue(), f'''\
+template_specialize_rename invalid path {os.path.join('..', 'bar.txt')!r}''')
 
     def test_rename_error_name_non_str(self):
         test_files = [
@@ -781,7 +780,8 @@ template_specialize_rename invalid path '../bar.txt\'''')
             self.assertEqual(stdout.getvalue(), '')
             self.assertEqual(
                 stderr.getvalue(),
-                f"{os.path.join(input_dir, 'template.txt')}: error: template_specialize_rename - invalid destination name '  /foo.txt'\n"
+                f"{os.path.join(input_dir, 'template.txt')}: error: template_specialize_rename - " + \
+                    f"invalid destination name {os.path.join('  ', 'foo.txt')!r}\n"
             )
 
     def test_rename_error_src_undefined(self):

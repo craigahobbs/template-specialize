@@ -10,6 +10,7 @@ import datetime
 from itertools import chain
 import json
 import os
+import pathlib
 import re
 import shutil
 
@@ -103,8 +104,14 @@ def main(argv=None):
     )
     for src_file, dst_file in zip(src_files, dst_files):
         try:
+            # Translate OS source path to a POSIX path
+            if os.sep == '/': # pragma: no cover
+                posix_src_file = src_file
+            else: # pragma: no cover
+                posix_src_file = pathlib.Path(src_file).as_posix()
+
             # Load the template
-            template = environment.get_template(src_file)
+            template = environment.get_template(posix_src_file)
 
             # Ensure the destination directory exists (only for template directories)
             if is_dir:
@@ -179,10 +186,19 @@ class TemplateSpecializeRenameExtension(jinja2.ext.Extension):
             name._fail_with_undefined_error() # pylint: disable=protected-access
         if not (isinstance(path, str) and path.strip() != ''):
             raise ValueError(f'template_specialize_rename - invalid source path {path!r}')
-        if name is not None and \
-           not (isinstance(name, str) and os.path.basename(name).strip() != '' and os.path.dirname(name) == ''):
-            raise ValueError(f'template_specialize_rename - invalid destination name {name!r}')
-        self.environment.template_specialize_rename.append((path.strip(), name.strip() if name is not None else None))
+
+        # Translate template POSIX path to an OS path
+        if os.sep == '/': # pragma: no cover
+            os_path = path
+            os_name = name
+        else: # pragma: no cover
+            os_path = os.path.join(*path.split('/'))
+            os_name = os.path.join(*name.split('/')) if isinstance(name, str) else name
+
+        if os_name is not None and \
+           not (isinstance(os_name, str) and os.path.basename(os_name).strip() != '' and os.path.dirname(os_name) == ''):
+            raise ValueError(f'template_specialize_rename - invalid destination name {os_name!r}')
+        self.environment.template_specialize_rename.append((os_path.strip(), os_name.strip() if os_name is not None else None))
         return ''
 
 
