@@ -10,11 +10,6 @@
 templates.
 
 
-## Links
-
-- [Source code](https://github.com/craigahobbs/template-specialize)
-
-
 ## Render a Template File
 
 For example, consider this Markdown name tag template, "nametag.md":
