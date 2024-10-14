@@ -345,10 +345,10 @@ a.c = [12, 11]
         ]
         with create_test_files(test_files) as input_dir:
             config_path = os.path.join(input_dir, 'config.config')
-            for argv in [
+            for argv in (
                     ['-c', config_path, '-e', 'unknown', 'src.txt', 'dst.txt'],
                     ['-e', 'unknown', 'src.txt', 'dst.txt']
-            ]:
+            ):
                 with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
                      unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
                     with self.assertRaises(SystemExit) as cm_exc:
