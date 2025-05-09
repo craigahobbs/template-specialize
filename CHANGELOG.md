@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.5.2 (2025-05-09)
+
+- [80eace8](https://github.com/craigahobbs/template-specialize/commit/80eace8) - add Python 3.14
+
+- [14e7801](https://github.com/craigahobbs/template-specialize/commit/14e7801) - remove setup.cfg license classifier
+
 ## 1.5.1 (2024-10-02)
 
 - [7c5f7fe](https://github.com/craigahobbs/template-specialize/commit/7c5f7fe) - add Python 3.13, remove Python 3.8 \(end-of-life\)
