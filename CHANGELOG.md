@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.6.0 (2025-07-15)
+
+- [5e20bc5](https://github.com/craigahobbs/template-specialize/commit/5e20bc5) - add -i argument to add an include search path
+
 ## 1.5.2 (2025-05-09)
 
 - [80eace8](https://github.com/craigahobbs/template-specialize/commit/80eace8) - add Python 3.14
