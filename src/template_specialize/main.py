@@ -31,6 +31,8 @@ def main(argv=None):
                         help='the source template file or directory')
     parser.add_argument('dst_path', metavar='DST',
                         help='the destination file or directory')
+    parser.add_argument('-i', dest='searchpaths', metavar='PATH', action='append', default=[],
+                        help='add an include search path')
     parser.add_argument('-c', dest='environment_files', metavar='FILE', action='append',
                         help='the environment files')
     parser.add_argument('-e', dest='environment', metavar='ENV',
@@ -97,7 +99,7 @@ def main(argv=None):
 
     # Process the template files
     environment = jinja2.Environment(
-        loader=jinja2.FileSystemLoader(src_dir, encoding='utf-8'),
+        loader=jinja2.FileSystemLoader([src_dir, *args.searchpaths], encoding='utf-8'),
         extensions=extensions,
         undefined=jinja2.StrictUndefined,
         keep_trailing_newline=True
@@ -119,8 +121,8 @@ def main(argv=None):
 
             # Render the template
             template.stream(**template_variables).dump(dst_file, encoding='utf-8')
-        except jinja2.TemplateNotFound:
-            parser.exit(message=f'{os.path.join(src_dir, src_file)}: template file or directory not found\n', status=2)
+        except jinja2.TemplateNotFound as exc:
+            parser.exit(message=f'{exc}\n', status=2)
         except jinja2.TemplateSyntaxError as exc:
             parser.exit(message=f'{exc.filename}:{exc.lineno}: {exc.message}\n', status=2)
         except Exception as exc: # pylint: disable=broad-except

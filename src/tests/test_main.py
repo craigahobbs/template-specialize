@@ -391,12 +391,31 @@ unknown environment 'unknown'
             with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
                  unittest_mock.patch('sys.stderr', new=StringIO()) as stderr, \
                  unittest_mock.patch('template_specialize.main.datetime.datetime', MockDateTime):
-                main([input_path, output_path, '--key', 'foo', 'bar'])
+                main([input_path, output_path])
 
             self.assertEqual(stdout.getvalue(), '')
             self.assertEqual(stderr.getvalue(), '')
             with open(os.path.join(output_dir, 'other.txt'), 'r', encoding='utf-8') as f_output:
                 self.assertEqual(f_output.read(), 'the year is 2017')
+
+    def test_file_to_file_searchpath(self):
+        test_files = [
+            (('pri', 'template.txt'), "{% include 'sub/year.txt' %}"),
+            (('sub', 'year.txt'), 'YYYY')
+        ]
+        with create_test_files(test_files) as input_dir, \
+             create_test_files([]) as output_dir:
+            input_path = os.path.join(input_dir, 'pri', 'template.txt')
+            output_path = os.path.join(output_dir, 'other.txt')
+            with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
+                 unittest_mock.patch('sys.stderr', new=StringIO()) as stderr, \
+                 unittest_mock.patch('template_specialize.main.datetime.datetime', MockDateTime):
+                main([input_path, output_path, '-i', input_dir])
+
+            self.assertEqual(stdout.getvalue(), '')
+            self.assertEqual(stderr.getvalue(), '')
+            with open(os.path.join(output_dir, 'other.txt'), 'r', encoding='utf-8') as f_output:
+                self.assertEqual(f_output.read(), 'YYYY')
 
     def test_file_to_dir(self):
         test_files = [
@@ -464,11 +483,11 @@ unknown environment 'unknown'
             with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
                  unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
                 with self.assertRaises(SystemExit) as cm_exc:
-                    main([input_path, output_path, '--key', 'foo', 'bar'])
+                    main([input_path, output_path])
 
             self.assertEqual(cm_exc.exception.code, 2)
             self.assertEqual(stdout.getvalue(), '')
-            self.assertEqual(stderr.getvalue(), f"{input_path}: template file or directory not found\n")
+            self.assertEqual(stderr.getvalue(), f"'template.txt' not found in search path: '{input_dir}'\n")
             self.assertFalse(os.path.exists(input_path))
             self.assertFalse(os.path.exists(output_path))
 
