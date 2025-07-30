@@ -66,7 +66,7 @@ def main(argv=None):
             except ValueError:
                 value_json = value
             _merge_values({key: value_json}, template_variables)
-    except Exception as exc: # pylint: disable=broad-except
+    except Exception as exc:
         parser.exit(message=f'{exc}\n', status=2)
 
     # Dump the template variables, if necessary
@@ -125,7 +125,7 @@ def main(argv=None):
             parser.exit(message=f'{exc}\n', status=2)
         except jinja2.TemplateSyntaxError as exc:
             parser.exit(message=f'{exc.filename}:{exc.lineno}: {exc.message}\n', status=2)
-        except Exception as exc: # pylint: disable=broad-except
+        except Exception as exc:
             parser.exit(message=f'{os.path.join(src_dir, src_file)}: error: {exc}\n', status=2)
 
     # Process any template destination path rename and delete operations
@@ -153,7 +153,7 @@ def main(argv=None):
 
                     # Rename...
                     os.rename(rename_path, rename_dst_path)
-            except Exception as exc: # pylint: disable=broad-except
+            except Exception as exc:
                 parser.exit(message=f'template_specialize_rename error: {exc}', status=2)
 
 
