@@ -487,7 +487,7 @@ unknown environment 'unknown'
 
             self.assertEqual(cm_exc.exception.code, 2)
             self.assertEqual(stdout.getvalue(), '')
-            self.assertEqual(stderr.getvalue(), f"'template.txt' not found in search path: '{input_dir}'\n")
+            self.assertEqual(stderr.getvalue(), f"'template.txt' not found in search path: {input_dir!r}\n")
             self.assertFalse(os.path.exists(input_path))
             self.assertFalse(os.path.exists(output_path))
 
