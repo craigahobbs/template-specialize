@@ -26,7 +26,7 @@ def main(argv=None):
     """
 
     # Command line arguments
-    parser = argparse.ArgumentParser(prog='template-specialize')
+    parser = argparse.ArgumentParser(prog='template-specialize', color=False)
     parser.add_argument('src_path', metavar='SRC',
                         help='the source template file or directory')
     parser.add_argument('dst_path', metavar='DST',
