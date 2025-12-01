@@ -13,6 +13,7 @@ import os
 import pathlib
 import re
 import shutil
+import sys
 
 import jinja2
 import jinja2.ext
@@ -26,7 +27,10 @@ def main(argv=None):
     """
 
     # Command line arguments
-    parser = argparse.ArgumentParser(prog='template-specialize', color=False)
+    argument_parser_args = {'prog': 'template-specialize'}
+    if sys.version_info >= (3, 14): # pragma: no cover
+        argument_parser_args['color'] = False
+    parser = argparse.ArgumentParser(**argument_parser_args)
     parser.add_argument('src_path', metavar='SRC',
                         help='the source template file or directory')
     parser.add_argument('dst_path', metavar='DST',
