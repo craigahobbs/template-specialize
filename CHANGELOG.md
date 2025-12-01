@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.6.1 (2025-12-01)
+
+- [555a9c1](https://github.com/craigahobbs/template-specialize/commit/555a9c1) - ArgumentParser color=False
+
 ## 1.6.0 (2025-07-15)
 
 - [5e20bc5](https://github.com/craigahobbs/template-specialize/commit/5e20bc5) - add -i argument to add an include search path
