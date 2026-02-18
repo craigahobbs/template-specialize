@@ -139,7 +139,7 @@ def main(argv=None):
             rename_path = os.path.normpath(os.path.join(args.dst_path, rename_path_rel))
 
             # Ensure the source path is contained by the destination template directory
-            if os.path.commonprefix((dst_path_norm, rename_path)) != dst_path_norm:
+            if not os.path.samefile(os.path.commonpath((dst_path_norm, rename_path)), dst_path_norm):
                 parser.exit(message=f'template_specialize_rename invalid path {rename_path_rel!r}', status=2)
 
             # Delete?
