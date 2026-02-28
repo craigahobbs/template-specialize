@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.6.2 (2026-02-28)
+
+- [59fc97e](https://github.com/craigahobbs/template-specialize/commit/59fc97e) - use os.path.commonpath instead of os.path.commonprefix
+
 ## 1.6.1 (2025-12-01)
 
 - [555a9c1](https://github.com/craigahobbs/template-specialize/commit/555a9c1) - ArgumentParser color=False
