@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.6.3 (2026-08-06)
+
+- [abb1a45](https://github.com/craigahobbs/template-specialize/commit/abb1a45) - migrate package metadata from setup.cfg to pyproject.toml
+
 ## 1.6.2 (2026-02-28)
 
 - [59fc97e](https://github.com/craigahobbs/template-specialize/commit/59fc97e) - use os.path.commonpath instead of os.path.commonprefix
