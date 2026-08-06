@@ -124,7 +124,6 @@ consider a Python project template with the following structure:
 |-- README.md
 |-- package-name.txt
 |-- pyproject.toml
-|-- setup.cfg
 `-- src
     |-- __init__.py
     |-- package_name
@@ -164,7 +163,6 @@ source files:
 .
 |-- README.md
 |-- pyproject.toml
-|-- setup.cfg
 `-- src
     |-- __init__.py
     |-- my_package
