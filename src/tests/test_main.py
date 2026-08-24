@@ -736,6 +736,51 @@ unknown environment 'unknown'
             self.assertEqual(stderr.getvalue(), f'''\
 template_specialize_rename invalid path {os.path.join('..', 'bar.txt')!r}''')
 
+    def test_rename_error_path_dot(self):
+        test_files = [
+            (
+                'template.txt',
+                '''\
+{% template_specialize_rename '.', 'evil' %}
+'''
+            )
+        ]
+        with create_test_files(test_files) as input_dir, \
+             create_test_files([]) as output_dir:
+            with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
+                 unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
+                with self.assertRaises(SystemExit):
+                    main([input_dir, output_dir])
+
+            self.assertEqual(stdout.getvalue(), '')
+            self.assertEqual(stderr.getvalue(), "template_specialize_rename invalid path '.'")
+            self.assertTrue(os.path.isfile(os.path.join(output_dir, 'template.txt')))
+
+    def test_rename_error_path_parent(self):
+        test_files = [
+            (
+                'template.txt',
+                '''\
+{% template_specialize_rename 'subdir/..', 'evil' %}
+'''
+            ),
+            (('subdir', 'subtemplate.txt'), 'sub')
+        ]
+        with create_test_files(test_files) as input_dir, \
+             create_test_files([]) as output_dir:
+            with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
+                 unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
+                with self.assertRaises(SystemExit):
+                    main([input_dir, output_dir])
+
+            self.assertEqual(stdout.getvalue(), '')
+            self.assertEqual(
+                stderr.getvalue(),
+                f'template_specialize_rename invalid path {os.path.join("subdir", "..")!r}'
+            )
+            self.assertTrue(os.path.isfile(os.path.join(output_dir, 'template.txt')))
+            self.assertTrue(os.path.isfile(os.path.join(output_dir, 'subdir', 'subtemplate.txt')))
+
     def test_rename_error_name_non_str(self):
         test_files = [
             (
@@ -778,6 +823,50 @@ template_specialize_rename invalid path {os.path.join('..', 'bar.txt')!r}''')
             self.assertEqual(
                 stderr.getvalue(),
                 f"{os.path.join(input_dir, 'template.txt')}: error: template_specialize_rename - invalid destination name '  '\n"
+            )
+
+    def test_rename_error_name_dot(self):
+        test_files = [
+            (
+                'template.txt',
+                '''\
+{% template_specialize_rename "template.txt", '.' %}
+'''
+            )
+        ]
+        with create_test_files(test_files) as input_dir, \
+             create_test_files([]) as output_dir:
+            with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
+                 unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
+                with self.assertRaises(SystemExit):
+                    main([input_dir, output_dir])
+
+            self.assertEqual(stdout.getvalue(), '')
+            self.assertEqual(
+                stderr.getvalue(),
+                f"{os.path.join(input_dir, 'template.txt')}: error: template_specialize_rename - invalid destination name '.'\n"
+            )
+
+    def test_rename_error_name_dotdot(self):
+        test_files = [
+            (
+                'template.txt',
+                '''\
+{% template_specialize_rename "template.txt", '..' %}
+'''
+            )
+        ]
+        with create_test_files(test_files) as input_dir, \
+             create_test_files([]) as output_dir:
+            with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
+                 unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
+                with self.assertRaises(SystemExit):
+                    main([input_dir, output_dir])
+
+            self.assertEqual(stdout.getvalue(), '')
+            self.assertEqual(
+                stderr.getvalue(),
+                f"{os.path.join(input_dir, 'template.txt')}: error: template_specialize_rename - invalid destination name '..'\n"
             )
 
     def test_rename_error_name_dirname(self):

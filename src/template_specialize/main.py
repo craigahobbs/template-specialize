@@ -138,8 +138,9 @@ def main(argv=None):
         for rename_path_rel, rename_name in environment.template_specialize_rename: # pylint: disable=no-member
             rename_path = os.path.normpath(os.path.join(args.dst_path, rename_path_rel))
 
-            # Ensure the source path is contained by the destination template directory
-            if not os.path.samefile(os.path.commonpath((dst_path_norm, rename_path)), dst_path_norm):
+            # Ensure the source path is strictly inside the destination template directory
+            if not os.path.samefile(os.path.commonpath((dst_path_norm, rename_path)), dst_path_norm) or \
+               os.path.join(rename_path, '') == dst_path_norm:
                 parser.exit(message=f'template_specialize_rename invalid path {rename_path_rel!r}', status=2)
 
             # Delete?
@@ -202,7 +203,8 @@ class TemplateSpecializeRenameExtension(jinja2.ext.Extension):
             os_name = os.path.join(*name.split('/')) if isinstance(name, str) else name
 
         if os_name is not None and \
-           not (isinstance(os_name, str) and os.path.basename(os_name).strip() != '' and os.path.dirname(os_name) == ''):
+           not (isinstance(os_name, str) and os.path.dirname(os_name) == '' and
+                os.path.basename(os_name).strip() not in ('', os.curdir, os.pardir)):
             raise ValueError(f'template_specialize_rename - invalid destination name {os_name!r}')
         self.environment.template_specialize_rename.append((os_path.strip(), os_name.strip() if os_name is not None else None))
         return ''
