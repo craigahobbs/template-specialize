@@ -96,7 +96,7 @@ def main(argv=None):
     else:
         dst_files = [args.dst_path]
 
-    # Template extensions - rename extension is only available for directory destination paths
+    # Template extensions - rename extension is only available for directory source paths
     extensions = [ParameterStoreExtension]
     if is_dir:
         extensions.append(TemplateSpecializeRenameExtension)
