@@ -54,7 +54,7 @@ def main(argv=None):
             try:
                 with open(environment_file, 'r', encoding='utf-8') as f_environment:
                     _parse_environments(f_environment.read(), environments)
-            except ValueError as exc:
+            except (ValueError, OSError) as exc:
                 parser.exit(message=f'{exc}\n', status=2)
 
     # Build the template variables dict
@@ -138,13 +138,13 @@ def main(argv=None):
         for rename_path_rel, rename_name in environment.template_specialize_rename: # pylint: disable=no-member
             rename_path = os.path.normpath(os.path.join(args.dst_path, rename_path_rel))
 
-            # Ensure the source path is strictly inside the destination template directory
-            if not os.path.samefile(os.path.commonpath((dst_path_norm, rename_path)), dst_path_norm) or \
-               os.path.join(rename_path, '') == dst_path_norm:
-                parser.exit(message=f'template_specialize_rename invalid path {rename_path_rel!r}', status=2)
-
-            # Delete?
             try:
+                # Ensure the source path is strictly inside the destination template directory
+                if not os.path.samefile(os.path.commonpath((dst_path_norm, rename_path)), dst_path_norm) or \
+                   os.path.join(rename_path, '') == dst_path_norm:
+                    parser.exit(message=f'template_specialize_rename invalid path {rename_path_rel!r}', status=2)
+
+                # Delete?
                 if rename_name is None:
                     if os.path.isdir(rename_path):
                         shutil.rmtree(rename_path)

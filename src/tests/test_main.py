@@ -109,6 +109,27 @@ Expecting value: line 1 column 1 (char 0)
             )
             self.assertFalse(os.path.exists(output_path))
 
+    def test_config_file_not_found(self):
+        test_files = [
+            ('template.txt', 'x')
+        ]
+        with create_test_files(test_files) as input_dir, \
+             create_test_files([]) as output_dir:
+            missing = os.path.join(input_dir, 'missing.config')
+            input_path = os.path.join(input_dir, 'template.txt')
+            output_path = os.path.join(output_dir, 'other.txt')
+            with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
+                 unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
+                with self.assertRaises(SystemExit) as cm_exc:
+                    main(['-c', missing, input_path, output_path])
+
+            self.assertEqual(cm_exc.exception.code, 2)
+            self.assertEqual(stdout.getvalue(), '')
+            with self.assertRaises(OSError) as cm_os:
+                os.stat(missing)
+            self.assertEqual(stderr.getvalue(), f'{cm_os.exception}\n')
+            self.assertFalse(os.path.exists(output_path))
+
     def test_environment_only(self):
         test_files = [
             (
