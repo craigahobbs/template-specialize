@@ -48,7 +48,21 @@ class TestMain(unittest.TestCase):
         self.assertTrue(os.path.isfile(console_script_path))
 
     def test_module_main(self):
-        self.assertTrue(template_specialize.__main__)
+        test_files = [
+            ('template.txt', 'the value of "foo" is "{{foo}}"')
+        ]
+        with create_test_files(test_files) as input_dir, \
+             create_test_files([]) as output_dir:
+            input_path = os.path.join(input_dir, 'template.txt')
+            output_path = os.path.join(output_dir, 'other.txt')
+            with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
+                 unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
+                template_specialize.__main__.main([input_path, output_path, '--key', 'foo', 'bar'])
+
+            self.assertEqual(stdout.getvalue(), '')
+            self.assertEqual(stderr.getvalue(), '')
+            with open(os.path.join(output_dir, 'other.txt'), 'r', encoding='utf-8') as f_output:
+                self.assertEqual(f_output.read(), 'the value of "foo" is "bar"')
 
     def test_sys_argv(self):
         test_files = [
