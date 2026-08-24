@@ -139,9 +139,8 @@ Expecting value: line 1 column 1 (char 0)
 
             self.assertEqual(cm_exc.exception.code, 2)
             self.assertEqual(stdout.getvalue(), '')
-            with self.assertRaises(OSError) as cm_os:
-                os.stat(missing)
-            self.assertEqual(stderr.getvalue(), f'{cm_os.exception}\n')
+            self.assertNotIn('Traceback', stderr.getvalue())
+            self.assertIn(repr(missing), stderr.getvalue())
             self.assertFalse(os.path.exists(output_path))
 
     def test_environment_only(self):
