@@ -109,6 +109,7 @@ $ template-specialize config-template.json config.json -c environments.json -e t
 {
     "db_host": "test-db-host",
     "db_name": "test-db",
+    "now": "2026-08-24T12:00:00",
     "service_name": "my-service"
 }
 ~~~
@@ -196,20 +197,21 @@ botocore is usually configured using
 ## Usage
 
 ~~~
-usage: template-specialize [-h] [-c FILE] [-e ENV] [-k KEY VALUE] [--dump]
+usage: template-specialize [-h] [-i PATH] [-c FILE] [-e ENV] [-k KEY VALUE]
+                           [--dump]
                            SRC DST
 
 positional arguments:
-  SRC                   the source template file or directory
-  DST                   the destination file or directory
+  SRC                  the source template file or directory
+  DST                  the destination file or directory
 
 options:
-  -h, --help            show this help message and exit
-  -c FILE               the environment files
-  -e ENV                the environment name
-  -k KEY VALUE, --key KEY VALUE
-                        add a template key and value
-  --dump                dump the template variables
+  -h, --help           show this help message and exit
+  -i PATH              add an include search path
+  -c FILE              the environment files
+  -e ENV               the environment name
+  -k, --key KEY VALUE  add a template key and value
+  --dump               dump the template variables
 ~~~
 
 
