@@ -401,6 +401,40 @@ unknown environment 'unknown'
             with open(os.path.join(output_dir, 'other.txt'), 'r', encoding='utf-8') as f_output:
                 self.assertEqual(f_output.read(), 'the value of "foo" is "bar"')
 
+    def test_file_to_file_trailing_newline(self):
+        test_files = [
+            ('template.txt', 'hello\n')
+        ]
+        with create_test_files(test_files) as input_dir, \
+             create_test_files([]) as output_dir:
+            input_path = os.path.join(input_dir, 'template.txt')
+            output_path = os.path.join(output_dir, 'other.txt')
+            with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
+                 unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
+                main([input_path, output_path])
+
+            self.assertEqual(stdout.getvalue(), '')
+            self.assertEqual(stderr.getvalue(), '')
+            with open(output_path, 'r', encoding='utf-8') as f_output:
+                self.assertEqual(f_output.read(), 'hello\n')
+
+    def test_file_to_file_undefined(self):
+        test_files = [
+            ('template.txt', '{{undefined_name}}')
+        ]
+        with create_test_files(test_files) as input_dir, \
+             create_test_files([]) as output_dir:
+            input_path = os.path.join(input_dir, 'template.txt')
+            output_path = os.path.join(output_dir, 'other.txt')
+            with unittest_mock.patch('sys.stdout', new=StringIO()) as stdout, \
+                 unittest_mock.patch('sys.stderr', new=StringIO()) as stderr:
+                with self.assertRaises(SystemExit) as cm_exc:
+                    main([input_path, output_path])
+
+            self.assertEqual(cm_exc.exception.code, 2)
+            self.assertEqual(stdout.getvalue(), '')
+            self.assertEqual(stderr.getvalue(), f"{input_path}: error: 'undefined_name' is undefined\n")
+
     def test_file_to_file_builtins(self):
         test_files = [
             ('template.txt', 'the year is {{now.year}}')
