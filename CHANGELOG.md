@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.6.4 (2026-08-24)
+
+- [8796122](https://github.com/craigahobbs/template-specialize/commit/8796122) - exit 2 on environment file IO errors
+
+- [727f716](https://github.com/craigahobbs/template-specialize/commit/727f716) - prevent template_specialize_rename from escaping DST
+
 ## 1.6.3 (2026-08-06)
 
 - [abb1a45](https://github.com/craigahobbs/template-specialize/commit/abb1a45) - migrate package metadata from setup.cfg to pyproject.toml
