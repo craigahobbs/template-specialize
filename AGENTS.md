@@ -10,7 +10,7 @@ This is a [python-build](https://github.com/craigahobbs/python-build#readme) pac
 
 Local Makefile overrides:
 
-- `TESTS_REQUIRE` — `botocore >= 1.0.0` (tests only; the AWS extension imports it lazily)
+- `TESTS_REQUIRE` — `botocore` (tests only; the AWS extension imports it lazily)
 - `PYLINT_ARGS` — missing docstring checks disabled
 - no `SPHINX_DOC` — `make doc` is a no-op
 
